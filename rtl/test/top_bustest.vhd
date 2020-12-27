@@ -438,6 +438,24 @@ port map
 );
 
 -- -----------------------------------------------------------------------
+-- Color RAM
+-- -----------------------------------------------------------------------
+colorram: entity work.bram_true2p_2clk
+generic map (
+	dual_port  => false,
+	addr_width => 10,
+	data_width => 4
+)
+port map (
+	clk_a      => clk32,
+	we_a       => colorWe,
+	addr_a     => systemAddr(9 downto 0),
+	data_in_a  => cpuDo(3 downto 0),
+	data_out_a => colorQ,
+	clk_b      => '0'
+);
+
+-- -----------------------------------------------------------------------
 -- PLA and bus-switches with ROM
 -- -----------------------------------------------------------------------
 buslogic: entity work.fpga64_buslogic
@@ -495,6 +513,40 @@ port map (
 	c64rom_wr => c64rom_wr
 );
 end generate;
+
+process(clk32)
+begin
+	if rising_edge(clk32) then
+		pulseWrRam <= '0';
+		if cpuWe = '1' then
+			if sysCycle = to_unsigned(sysCycleDef'pos(CYCLE_CPUC),sysCycle'length) then
+				pulseWrRam <= '1';
+			end if;
+		end if;
+	end if;
+end process;
+
+-- -----------------------------------------------------------------------
+-- VIC-II video interface chip
+-- -----------------------------------------------------------------------
+process(clk32)
+begin
+	if rising_edge(clk32) then
+		if phi0_cpu = '1' then
+			if cpuWe = '1' and cs_vic = '1' then
+				vicBus <= cpuDo;
+			else
+				vicBus <= x"FF";
+			end if;
+		end if;
+	end if;
+end process;
+
+-- In the first three cycles after BA went low, the VIC reads
+-- $ff as character pointers and
+-- as color information the lower 4 bits of the opcode after the access to $d011.
+vicDiAec <= vicBus when aec = '0' else vicDi;
+colorDataAec <= cpuDi(3 downto 0) when aec = '0' else colorData;
 
 vic: entity work.video_vicii_656x
 generic map (
