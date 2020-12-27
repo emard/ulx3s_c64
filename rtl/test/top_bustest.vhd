@@ -13,7 +13,7 @@ use IEEE.numeric_std.ALL;
 entity top_bustest is
   generic
   (
-    victest  : boolean := true -- true: fast compile VIC color test, false: normal C64 with CPU
+    victest  : boolean := false -- true: fast compile VIC color test, false: normal C64 with CPU
   );
   port
   (
@@ -89,6 +89,7 @@ signal ramDataOut  : unsigned(7 downto 0);
 
 signal ramCE       : std_logic;
 signal ramWe       : std_logic;
+signal ramWeCe     : std_logic;
 
 signal cs_vic       : std_logic;
 signal cs_sid       : std_logic;
@@ -211,11 +212,13 @@ signal	iec_data_i  : std_logic;
 signal	iec_clk_o   : std_logic;
 signal	iec_clk_i   : std_logic;
 signal	iec_atn_o   : std_logic;
-	
+
+-- external ROM update
 signal	c64rom_addr : std_logic_vector(13 downto 0);
 signal	c64rom_data : std_logic_vector(7 downto 0);
-signal	c64rom_wr   : std_logic;
+signal	c64rom_wr   : std_logic := '0';
 
+-- cassette
 signal	cass_motor  : std_logic;
 signal	cass_write  : std_logic;
 signal	cass_sense  : std_logic;
@@ -349,6 +352,20 @@ ramWe <= '0' when sysCycle = to_unsigned(sysCycleDef'pos(CYCLE_IEC2),sysCycle'le
 ramCE <= '0' when ((sysCycle >= to_unsigned(sysCycleDef'pos(CYCLE_CPU2),sysCycle'length) and sysCycle <= to_unsigned(sysCycleDef'pos(CYCLE_CPUE),sysCycle'length))
                or  (sysCycle >= to_unsigned(sysCycleDef'pos(CYCLE_VIC0),sysCycle'length) and sysCycle <= to_unsigned(sysCycleDef'pos(CYCLE_VIC3),sysCycle'length)))
               and cs_ram = '1' else '1';
+ramWeCE <= (not ramWe) and (not ramCE);
+
+process(clk32)
+begin
+	if rising_edge(clk32) then
+		if sysCycle = to_unsigned(sysCycleDef'pos(CYCLE_CPUD),sysCycle'length)
+		or sysCycle = to_unsigned(sysCycleDef'pos(CYCLE_VIC2),sysCycle'length) then
+			ramDataReg <= unsigned(ramDataIn);
+		end if;
+		if sysCycle = to_unsigned(sysCycleDef'pos(CYCLE_VIC3),sysCycle'length) then
+			lastVicDi <= vicDi;
+		end if;
+	end if;
+end process;
 
 -- dummy bus traffic generator for VIC to generate picture
 dummy: if victest generate
@@ -400,6 +417,25 @@ port map (
 
 cass_motor <= cpuIO(5);
 cass_write <= cpuIO(3);
+
+-- 64K RAM (BRAM)
+ram64k: entity work.bram_true2p_2clk
+generic map
+(
+	dual_port  => false,
+	addr_width => 16,
+	data_width => 8
+)
+port map
+(
+	clk_a      => clk32,
+	addr_a     => ramAddr,
+	we_a       => ramWeCE,
+	data_in_a  => ramDataOut,
+	data_out_a => ramDataIn,
+	
+	clk_b      => '0'
+);
 
 -- -----------------------------------------------------------------------
 -- PLA and bus-switches with ROM
