@@ -21,7 +21,7 @@ entity bram_true2p_2clk is
 	port 
 	(
 		clk_a: in std_logic;
-		clk_b: in std_logic;
+		clk_b: in std_logic := '0';
 		addr_a: in unsigned((addr_width-1) downto 0);
 		addr_b: in unsigned((addr_width-1) downto 0) := (others => '-');
 		we_a: in std_logic := '0';

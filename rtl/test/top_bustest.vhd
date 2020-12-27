@@ -91,6 +91,9 @@ signal ramCE       : std_logic;
 signal ramWe       : std_logic;
 signal ramWeCe     : std_logic;
 
+signal io_cycle    : std_logic;
+signal idle        : std_logic;
+
 signal cs_vic       : std_logic;
 signal cs_sid       : std_logic;
 signal cs_color     : std_logic;
@@ -213,7 +216,7 @@ signal	iec_clk_o   : std_logic;
 signal	iec_clk_i   : std_logic;
 signal	iec_atn_o   : std_logic;
 
--- external ROM update
+-- external (SPI) ROM update
 signal	c64rom_addr : std_logic_vector(13 downto 0);
 signal	c64rom_data : std_logic_vector(7 downto 0);
 signal	c64rom_wr   : std_logic := '0';
@@ -342,9 +345,20 @@ begin
 	end if;
 end process;
 
---iec_data_o <= not cia2_pao(5);
---iec_clk_o <= not cia2_pao(4);
---iec_atn_o <= not cia2_pao(3);
+-- -----------------------------------------------------------------------
+-- Local signal to outside world
+-- -----------------------------------------------------------------------
+ba <= baLoc;
+
+io_cycle <= '1' when (sysCycle >= to_unsigned(sysCycleDef'pos(CYCLE_IDLE0),sysCycle'length)) and (sysCycle <= to_unsigned(sysCycleDef'pos(CYCLE_IEC3),sysCycle'length))
+       else '0';
+
+idle <= '1' when (sysCycle >= to_unsigned(sysCycleDef'pos(CYCLE_IDLE4),sysCycle'length)) and (sysCycle <= to_unsigned(sysCycleDef'pos(CYCLE_IDLE7),sysCycle'length))
+   else '0';
+
+iec_data_o <= not cia2_pao(5);
+iec_clk_o <= not cia2_pao(4);
+iec_atn_o <= not cia2_pao(3);
 ramDataOut <= "00" & cia2_pao(5 downto 3) & "000" when sysCycle >= to_unsigned(sysCycleDef'pos(CYCLE_IEC0),sysCycle'length) and sysCycle <= to_unsigned(sysCycleDef'pos(CYCLE_IEC3),sysCycle'length) else cpuDo;
 ramAddr <= systemAddr;
 ramWe <= '0' when sysCycle = to_unsigned(sysCycleDef'pos(CYCLE_IEC2),sysCycle'length) or sysCycle = to_unsigned(sysCycleDef'pos(CYCLE_IEC3),sysCycle'length) else not systemWe;
