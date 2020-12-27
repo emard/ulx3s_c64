@@ -241,6 +241,34 @@ signal	uart_dcd_in : std_logic; -- CIA2, PortB(4)
 signal	uart_cts    : std_logic; -- CIA2, PortB(6)
 signal	uart_dsr    : std_logic; -- CIA2, PortB(7)
 
+-- verilog component
+component mos6526
+	port (
+		clk           : in  std_logic;
+		mode          : in  std_logic := '0'; -- 0 - 6526 "old", 1 - 8521 "new"
+		phi2_p        : in  std_logic;
+		phi2_n        : in  std_logic;
+		res_n         : in  std_logic;
+		cs_n          : in  std_logic;
+		rw            : in  std_logic; -- '1' - read, '0' - write
+		rs            : in  unsigned(3 downto 0);
+		db_in         : in  unsigned(7 downto 0);
+		db_out        : out unsigned(7 downto 0);
+		pa_in         : in  unsigned(7 downto 0);
+		pa_out        : out unsigned(7 downto 0);
+		pb_in         : in  unsigned(7 downto 0);
+		pb_out        : out unsigned(7 downto 0);
+		flag_n        : in  std_logic;
+		pc_n          : out std_logic;
+		tod           : in  std_logic;
+		sp_in         : in  std_logic;
+		sp_out        : out std_logic;
+		cnt_in        : in  std_logic;
+		cnt_out       : out std_logic;
+		irq_n         : out std_logic
+	);
+end component; 
+
 ----------------------------------------------------------
 begin
   clk_c64_pll: entity work.ecp5pll
@@ -539,6 +567,67 @@ begin
 		end if;
 	end if;
 end process;
+
+-- -----------------------------------------------------------------------
+-- CIAs
+-- -----------------------------------------------------------------------
+cia1: mos6526
+port map (
+	clk => clk32,
+	phi2_p => enableCia_p,
+	phi2_n => enableCia_n,
+	res_n => not reset,
+	cs_n => not cs_cia1,
+	rw => not cpuWe,
+
+	rs => cpuAddr(3 downto 0),
+	db_in => cpuDo,
+	db_out => cia1Do,
+
+	pa_in => cia1_pai,
+	pa_out => cia1_pao,
+	pb_in => cia1_pbi,
+	pb_out => cia1_pbo,
+
+	flag_n => cass_in,
+	sp_in => '1',
+	cnt_in => '1',
+
+	tod => vicVSync, -- FIXME not exactly 50Hz
+
+	irq_n => irq_cia1
+);
+
+cia2: mos6526
+port map (
+	clk => clk32,
+	phi2_p => enableCia_p,
+	phi2_n => enableCia_n,
+	res_n => not reset,
+	cs_n => not cs_cia2,
+	rw => not cpuWe,
+
+	rs => cpuAddr(3 downto 0),
+	db_in => cpuDo,
+	db_out => cia2Do,
+
+	pa_in => cia2_pai,
+	pa_out => cia2_pao,
+	pb_in => cia2_pbi,
+	pb_out => cia2_pbo,
+
+	-- Looks like most of the old terminal programs use the FLAG_N input (and to PB0) on CIA2 to
+	-- trigger an interrupt on the falling edge of the RXD input.
+	-- (and they don't use the "SP" pin for some reason?) ElectronAsh.
+	flag_n => uart_rxd,
+	
+	sp_in => uart_rxd,	-- Hooking up to the SP pin anyway, ready for the "UP9600" style serial.
+	cnt_in => '1',
+
+	tod => vicVSync, -- FIXME not exactly 50Hz
+
+	irq_n => irq_cia2
+);
 
 -- -----------------------------------------------------------------------
 -- VIC-II video interface chip

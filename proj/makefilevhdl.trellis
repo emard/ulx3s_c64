@@ -23,9 +23,8 @@ TOP_MODULE = top_victest
 TOP_MODULE = top_bustest
 TOP_MODULE_FILE = ../rtl/test/$(TOP_MODULE).vhd
 
-VERILOG_FILES = \
+VERILOG_FILES = ../rtl/mos6526.v \
 
-# *.vhd those files will be converted to *.v files with vhdl2vl (warning overwriting/deleting)
 GHDL_FILES = \
   $(TOP_MODULE_FILE) \
   ../rtl/ecp5/ecp5pll.vhd \
