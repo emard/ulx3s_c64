@@ -35,7 +35,10 @@ GHDL_FILES = \
   ../rtl/t65/T65_ALU.vhd \
   ../rtl/t65/T65_MCode.vhd \
   ../rtl/fpga64_buslogic.vhd \
-  ../rtl/dprom.vhd \
+  ../rtl/dprom_kernal.vhd \
+  ../rtl/roms/rom_kernal_pack.vhd \
+  ../rtl/dprom_chargen.vhd \
+  ../rtl/roms/rom_chargen_pack.vhd \
   ../rtl/video_vicII_656x.vhd \
   ../rtl/fpga64_rgbcolor.vhd \
   ../rtl/dvi/vga.vhd \

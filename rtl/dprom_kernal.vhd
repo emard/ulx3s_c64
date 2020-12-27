@@ -5,11 +5,12 @@ use IEEE.std_logic_1164.all;
 use IEEE.std_logic_unsigned.ALL;
 use IEEE.numeric_std.all;
 
-entity dprom is
+use work.rom_kernal_pack.all;
+
+entity dprom_kernal is
 
 	generic 
 	(
-		INIT_FILE  : string  := "";
 		ADDR_WIDTH : natural := 14;
 		DATA_WIDTH : natural := 8
 	);
@@ -18,7 +19,7 @@ entity dprom is
 	(
 		wrclock   : in  std_logic;
 		wraddress : in  std_logic_vector((ADDR_WIDTH - 1) downto 0) := (others => '0');
-		data	    : in  std_logic_vector((DATA_WIDTH - 1) downto 0) := (others => '0');
+		data	  : in  std_logic_vector((DATA_WIDTH - 1) downto 0) := (others => '0');
 		wren      : in  std_logic := '0';
 
 		rdclock   : in  std_logic;
@@ -27,19 +28,19 @@ entity dprom is
 		cs        : in  std_logic := '1'
 	);
 
-end dprom;
+end;
 
-architecture rtl of dprom is
+architecture rtl of dprom_kernal is
 
-	subtype word_t is std_logic_vector((DATA_WIDTH-1) downto 0);
-	type memory_t is array(2**ADDR_WIDTH-1 downto 0) of word_t;
+	--subtype word_t is std_logic_vector(q'range);
+	--type memory_t is array(0 to 2**rdaddress'length-1) of word_t;
 
-	shared variable ram : memory_t;
+	shared variable ram : t_rom_kernal := rom_kernal;
 
-	attribute ram_init_file : string;
-	attribute ram_init_file of ram : variable is INIT_FILE;
+	--attribute ram_init_file : string;
+	--attribute ram_init_file of ram : variable is INIT_FILE;
 
-	signal q0 : std_logic_vector((DATA_WIDTH - 1) downto 0);
+	signal q0 : std_logic_vector(q'range);
 
 begin
 

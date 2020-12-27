@@ -26,7 +26,6 @@ entity fpga64_buslogic is
 	port (
 		clk : in std_logic;
 		reset : in std_logic;
-		bios  : in std_logic_vector(1 downto 0);
 
 		cpuHasBus : in std_logic;
 		aec : in std_logic;
@@ -105,8 +104,6 @@ architecture rtl of fpga64_buslogic is
 	signal romData_c64: std_logic_vector(7 downto 0);
 	signal romData_c64std: std_logic_vector(7 downto 0);
 	signal romData_c64gs: std_logic_vector(7 downto 0);
-	signal c64gs_ena : std_logic := '0';
-	signal c64std_ena : std_logic := '0';
 
 	signal cs_CharReg : std_logic;
 	signal cs_romReg : std_logic;
@@ -128,30 +125,17 @@ architecture rtl of fpga64_buslogic is
 	signal currentAddr: unsigned(15 downto 0);
 	
 begin
-	chargen: entity work.dprom
-	generic map ("rtl/roms/chargen.mif", 12)
+	chargen: entity work.dprom_chargen
 	port map
 	(
 		wrclock => clk,
 		rdclock => clk,
-
+		
 		rdaddress => std_logic_vector(currentAddr(11 downto 0)),
 		q => charData
 	);
 
-	kernel_c64gs: entity work.dprom
-	generic map ("rtl/roms/std_C64GS.mif", 14)
-	port map
-	(
-		wrclock => clk,
-		rdclock => clk,
-
-		rdaddress => std_logic_vector(cpuAddr(14) & cpuAddr(12 downto 0)),
-		q => romData_c64gs
-	);
-
-	kernel_c64: entity work.dprom
-	generic map ("rtl/roms/std_C64.mif", 14)
+	kernel_c64: entity work.dprom_kernal
 	port map
 	(
 		wrclock => clk,
@@ -165,27 +149,7 @@ begin
 		q => romData_c64
 	);
 
-	kernel_c64std: entity work.dprom
-	generic map ("rtl/roms/std_C64.mif", 14)
-	port map
-	(
-		wrclock => clk,
-		rdclock => clk,
-
-		rdaddress => std_logic_vector(cpuAddr(14) & cpuAddr(12 downto 0)),
-		q => romData_c64std
-	);
-
-	romData <= romData_c64gs when c64gs_ena = '1' else romData_c64std when c64std_ena = '1' else romData_c64;
-	process(clk)
-	begin
-		if rising_edge(clk) then
-			if reset = '1' then 
-				c64gs_ena <= bios(1);
-				c64std_ena <= bios(0);
-			end if;
-		end if;
-	end process;
+	romData <= romData_c64;
 
 	--
 	--begin

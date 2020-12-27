@@ -13,9 +13,7 @@ use IEEE.numeric_std.ALL;
 entity top_bustest is
   generic
   (
-    victest  : boolean := true; -- true: fast compile VIC color test, false: normal C64 with CPU
-    --
-    bios     : std_logic_vector(1 downto 0) := "00"
+    victest  : boolean := true -- true: fast compile VIC color test, false: normal C64 with CPU
   );
   port
   (
@@ -170,20 +168,20 @@ signal audio_8580   : std_logic_vector(17 downto 0);
 -- cartridge port
 signal	game        : std_logic := '1';
 signal	exrom       : std_logic := '1';
-signal	ioE_rom     : std_logic;
-signal	ioF_rom     : std_logic;
-signal	max_ram     : std_logic;
-signal	irq_n       : std_logic;
-signal	nmi_n       : std_logic;
-signal	nmi_ack     : std_logic;
+signal	ioE_rom     : std_logic := '1';
+signal	ioF_rom     : std_logic := '1';
+signal	max_ram     : std_logic := '1';
+signal	irq_n       : std_logic := '1';
+signal	nmi_n       : std_logic := '1';
+signal	nmi_ack     : std_logic := '1';
 signal	dma_n       : std_logic := '1';
-signal	ba          : std_logic;
-signal	romL	    : std_logic; -- cart signals LCA
-signal	romH	    : std_logic; -- cart signals LCA
-signal	UMAXromH    : std_logic; -- cart signals LCA
-signal	IOE	    : std_logic; -- cart signals LCA
-signal	IOF	    : std_logic; -- cart signals LCA
-signal	CPU_hasbus  : std_logic; -- CPU has the bus STROBE
+signal	ba          : std_logic := '1';
+signal	romL	    : std_logic := '1'; -- cart signals LCA
+signal	romH	    : std_logic := '1'; -- cart signals LCA
+signal	UMAXromH    : std_logic := '1'; -- cart signals LCA
+signal	IOE	    : std_logic := '1'; -- cart signals LCA
+signal	IOF	    : std_logic := '1'; -- cart signals LCA
+signal	CPU_hasbus  : std_logic := '1'; -- CPU has the bus STROBE
 signal	freeze_key  : std_logic;
 
 signal	ioF_ext     : std_logic;
@@ -403,7 +401,6 @@ port map (
 cass_motor <= cpuIO(5);
 cass_write <= cpuIO(3);
 
-
 -- -----------------------------------------------------------------------
 -- PLA and bus-switches with ROM
 -- -----------------------------------------------------------------------
@@ -411,7 +408,6 @@ buslogic: entity work.fpga64_buslogic
 port map (
 	clk => clk32,
 	reset => reset,
-	bios => bios,
 
 	cpuHasBus => cpuHasBus,
 	aec => aec,
