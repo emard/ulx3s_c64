@@ -13,15 +13,9 @@ use IEEE.numeric_std.ALL;
 entity top_bustest is
   generic
   (
+    victest  : boolean := true; -- true: fast compile VIC color test, false: normal C64 with CPU
     --
-    bios     : std_logic_vector(1 downto 0) := "00";
-    -- test picture generator
-    x        : natural :=  720; -- pixels
-    y        : natural :=  576; -- pixels
-    f        : natural :=   50; -- Hz 60,50,30
-    xadjustf : integer :=    0; -- adjust -3..3 if no picture
-    yadjustf : integer :=    0; -- or to fine-tune f
-    C_ddr    : natural :=    1  -- 0:SDR 1:DDR
+    bios     : std_logic_vector(1 downto 0) := "00"
   );
   port
   (
@@ -40,84 +34,11 @@ entity top_bustest is
 end;
 
 architecture Behavioral of top_bustest is
-  type T_video_timing is record
-    x                  : natural;
-    hsync_front_porch  : natural;
-    hsync_pulse_width  : natural;
-    hsync_back_porch   : natural;
-    y                  : natural;
-    vsync_front_porch  : natural;
-    vsync_pulse_width  : natural;
-    vsync_back_porch   : natural;
-    f_pixel            : natural;
-  end record T_video_timing;
-  
-  type T_possible_freqs is array (natural range <>) of natural;
-  constant C_possible_freqs: T_possible_freqs :=
-  (
-    25000000,
-    27000000,
-    40000000,
-    50000000,
-    54000000,
-    60000000,
-    65000000,
-    75000000,
-    80000000,  -- overclock 400MHz
-    100000000, -- overclock 500MHz
-    108000000, -- overclock 540MHz
-    120000000  -- overclock 600MHz
-  );
-
-  function F_find_next_f(f: natural)
-    return natural is
-      variable f0: natural := 0;
-    begin
-      for fx in C_possible_freqs'range loop
-        if C_possible_freqs(fx)>f then
-          f0 := C_possible_freqs(fx);
-          exit;
-        end if;
-      end loop;
-      return f0;
-    end F_find_next_f;
-  
-  function F_video_timing(x,y,f: integer)
-    return T_video_timing is
-      variable video_timing : T_video_timing;
-      variable xminblank   : natural := x/64; -- initial estimate
-      variable yminblank   : natural := y/64; -- for minimal blank space
-      variable min_pixel_f : natural := f*(x+xminblank)*(y+yminblank);
-      variable pixel_f     : natural := F_find_next_f(min_pixel_f);
-      variable yframe      : natural := y+yminblank;
-      variable xframe      : natural := pixel_f/(f*yframe);
-      variable xblank      : natural := xframe-x;
-      variable yblank      : natural := yframe-y;
-    begin
-      video_timing.x                 := x;
-      video_timing.hsync_front_porch := xblank/3;
-      video_timing.hsync_pulse_width := xblank/3;
-      video_timing.hsync_back_porch  := xblank-video_timing.hsync_pulse_width-video_timing.hsync_front_porch+xadjustf;
-      video_timing.y                 := y;
-      video_timing.vsync_front_porch := yblank/3;
-      video_timing.vsync_pulse_width := yblank/3;
-      video_timing.vsync_back_porch  := yblank-video_timing.vsync_pulse_width-video_timing.vsync_front_porch+yadjustf;
-      video_timing.f_pixel           := pixel_f;
-
-      return video_timing;
-    end F_video_timing;
-    
-  constant video_timing : T_video_timing := F_video_timing(x,y,f);
 
   signal clocks: std_logic_vector(3 downto 0);
   signal clk_pixel, clk_shift: std_logic;
-  signal vga_hsync, vga_vsync, vga_blank, vga_de: std_logic;
-  signal vga_r, vga_g, vga_b: std_logic_vector(7 downto 0);
   signal dvid_red, dvid_green, dvid_blue, dvid_clock: std_logic_vector(1 downto 0);
-  signal beam_x, beam_y: std_logic_vector(12 downto 0);
   
-  signal R_slow_ena: std_logic_vector(10 downto 0);
-
   component ODDRX1F
     port (D0, D1, SCLK, RST: in std_logic; Q: out std_logic);
   end component;
@@ -247,8 +168,8 @@ signal audio_8580   : std_logic_vector(17 downto 0);
 
 -- "external" connections, in this project internal
 -- cartridge port
-signal	game        : std_logic;
-signal	exrom       : std_logic;
+signal	game        : std_logic := '1';
+signal	exrom       : std_logic := '1';
 signal	ioE_rom     : std_logic;
 signal	ioF_rom     : std_logic;
 signal	max_ram     : std_logic;
@@ -318,22 +239,6 @@ signal	uart_dsr    : std_logic; -- CIA2, PortB(7)
 
 ----------------------------------------------------------
 begin
-  --clk_single_pll: entity work.ecp5pll
-  --generic map
-  --(
-  --    in_Hz => natural(25.0e6),
-  --  out0_Hz => video_timing.f_pixel*5,
-  --  out1_Hz => video_timing.f_pixel
-  --)
-  --port map
-  --(
-  --  clk_i => clk_25MHz,
-  --  clk_o => clocks
-  --);
-  --clk_shift <= clocks(0);
-  --clk_pixel <= clocks(1);
-
----------------------------------------------------------
   clk_c64_pll: entity work.ecp5pll
   generic map
   (
@@ -448,7 +353,7 @@ ramCE <= '0' when ((sysCycle >= to_unsigned(sysCycleDef'pos(CYCLE_CPU2),sysCycle
               and cs_ram = '1' else '1';
 
 -- dummy bus traffic generator for VIC to generate picture
-dummy: if true generate
+dummy: if victest generate
 process(clk32)
 begin
 	if rising_edge(clk32) then
@@ -472,10 +377,36 @@ begin
 end process;
 end generate;
 
+c64: if not victest generate
+-- -----------------------------------------------------------------------
+-- 6510 CPU
+-- -----------------------------------------------------------------------
+cpu: entity work.cpu_6510
+port map (
+	clk => clk32,
+	reset => reset,
+	enable => enableCpu,
+	nmi_n => nmiLoc,
+	nmi_ack => nmi_ack,
+	irq_n => irqLoc,
+	rdy => baLoc,
+
+	di => cpuDi,
+	addr => cpuAddr,
+	do => cpuDo,
+	we => cpuWe,
+
+	diIO => cpuIO(7) & cpuIO(6) & cpuIO(5) & cass_sense & cpuIO(3) & "111",
+	doIO => cpuIO
+);
+
+cass_motor <= cpuIO(5);
+cass_write <= cpuIO(3);
+
+
 -- -----------------------------------------------------------------------
 -- PLA and bus-switches with ROM
 -- -----------------------------------------------------------------------
-pla: if false generate
 buslogic: entity work.fpga64_buslogic
 port map (
 	clk => clk32,
@@ -589,48 +520,6 @@ port map (
 
 ---------------------------------------------------------
 
-  process(clk_pixel)
-  begin
-    if rising_edge(clk_pixel) then
-      if R_slow_ena(R_slow_ena'high)='0' then
-        R_slow_ena <= R_slow_ena + 1;
-      else
-        R_slow_ena <= (others => '0');
-      end if;
-    end if;
-  end process;
-
-  vga_instance: entity work.vga
-  generic map
-  (
-    C_resolution_x      => video_timing.x,
-    C_hsync_front_porch => video_timing.hsync_front_porch,
-    C_hsync_pulse       => video_timing.hsync_pulse_width,
-    C_hsync_back_porch  => video_timing.hsync_back_porch,
-    C_resolution_y      => video_timing.y,
-    C_vsync_front_porch => video_timing.vsync_front_porch,
-    C_vsync_pulse       => video_timing.vsync_pulse_width,
-    C_vsync_back_porch  => video_timing.vsync_back_porch,
-
-    C_bits_x       =>  12,
-    C_bits_y       =>  11
-  )
-  port map
-  (
-      clk_pixel  => clk_pixel,
-      clk_pixel_ena => '1', -- R_slow_ena(R_slow_ena'high),
-      test_picture => '1',
-      --beam_x     => beam_x,
-      --beam_y     => beam_y,
-      vga_r      => vga_r,
-      vga_g      => vga_g,
-      vga_b      => vga_b,
-      vga_hsync  => vga_hsync,
-      vga_vsync  => vga_vsync,
-      vga_blank  => vga_blank
-      --vga_de     => vga_de
-  );
-  
   led(0) <= vichsync;
   led(1) <= vicvsync;
   led(2) <= reset;
@@ -647,14 +536,6 @@ port map (
   (
     clk_pixel => clk_pixel,
     clk_shift => clk_shift,
-
---  debug test picture generator vga_instance
---    in_red    => vga_r,
---    in_green  => vga_g,
---    in_blue   => vga_b,
---    in_hsync  => vga_hsync,
---    in_vsync  => vga_vsync,
---    in_blank  => vga_blank,
 
     in_red    => std_logic_vector(vic_r),
     in_green  => std_logic_vector(vic_g),

@@ -21,7 +21,7 @@ OPENOCD_INTERFACE=$(SCRIPTS)/ft231x.ocd
 CONSTRAINTS = ../constraints/ulx3s_v20.lpf
 TOP_MODULE = top_victest
 TOP_MODULE = top_bustest
-TOP_MODULE_FILE = ../rtl/victest/$(TOP_MODULE).vhd
+TOP_MODULE_FILE = ../rtl/test/$(TOP_MODULE).vhd
 
 VERILOG_FILES = \
 
@@ -29,13 +29,18 @@ VERILOG_FILES = \
 GHDL_FILES = \
   $(TOP_MODULE_FILE) \
   ../rtl/ecp5/ecp5pll.vhd \
+  ../rtl/cpu_6510.vhd \
+  ../rtl/t65/T65.vhd \
+  ../rtl/t65/T65_Pack.vhd \
+  ../rtl/t65/T65_ALU.vhd \
+  ../rtl/t65/T65_MCode.vhd \
+  ../rtl/fpga64_buslogic.vhd \
+  ../rtl/dprom.vhd \
+  ../rtl/video_vicII_656x.vhd \
+  ../rtl/fpga64_rgbcolor.vhd \
   ../rtl/dvi/vga.vhd \
   ../rtl/dvi/vga2dvid.vhd \
   ../rtl/dvi/tmds_encoder.vhd \
-  ../rtl/fpga64_rgbcolor.vhd \
-  ../rtl/video_vicII_656x.vhd \
-  ../rtl/dprom.vhd \
-  ../rtl/fpga64_buslogic.vhd \
 
 # synthesis options
 #YOSYS_OPTIONS = -noccu2

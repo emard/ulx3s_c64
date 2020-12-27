@@ -1,4 +1,4 @@
--- altera message_off 10306
+-- TODO: package with initial ROM content
 
 library ieee;
 use IEEE.std_logic_1164.all;
