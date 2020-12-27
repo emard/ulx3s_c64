@@ -124,7 +124,7 @@ VHDL_TO_VERILOG_FILES = $(VHDL_FILES:.vhd=.v)
 
 $(PROJECT).json: $(VERILOG_FILES) $(VHDL_TO_VERILOG_FILES) $(GHDL_FILES)
 	$(YOSYS) \
-	-p "ghdl --ieee=synopsys -fexplicit -frelaxed-rules --std=08 $(GHDL_FILES) -e $(TOP_MODULE)" \
+	-p "ghdl --ieee=synopsys --std=08 -fexplicit -frelaxed-rules $(GHDL_FILES) -e $(TOP_MODULE)" \
 	-p "hierarchy -top ${TOP_MODULE}" \
 	-p "synth_ecp5 ${YOSYS_OPTIONS} -json ${PROJECT}.json"
 
