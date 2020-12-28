@@ -120,6 +120,7 @@ signal cpuAddr      : unsigned(15 downto 0);
 signal cpuDi        : unsigned(7 downto 0);
 signal cpuDo        : unsigned(7 downto 0);
 signal cpuIO        : unsigned(7 downto 0);
+signal cpudiIO      : unsigned(7 downto 0);
 
 signal reset        : std_logic := '1';
 signal reset_cnt    : integer range 0 to resetCycles := 0;
@@ -503,9 +504,10 @@ port map (
 	do => cpuDo,
 	we => cpuWe,
 
-	diIO => cpuIO(7) & cpuIO(6) & cpuIO(5) & cass_sense & cpuIO(3) & "111",
+	diIO => cpudiIO,
 	doIO => cpuIO
 );
+cpudiIO <= cpuIO(7) & cpuIO(6) & cpuIO(5) & cass_sense & cpuIO(3) & "111";
 
 cass_motor <= cpuIO(5);
 cass_write <= cpuIO(3);
