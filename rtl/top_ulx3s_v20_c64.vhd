@@ -203,10 +203,10 @@ signal	ioE_ext     : std_logic;
 signal	io_data     : unsigned(7 downto 0);
 
 -- joystick interface
-signal	joyA        : std_logic_vector(6 downto 0);
-signal	joyB        : std_logic_vector(6 downto 0);
-signal	joyC        : std_logic_vector(6 downto 0);
-signal	joyD        : std_logic_vector(6 downto 0);
+signal	joyA        : std_logic_vector(6 downto 0) := (others => '1');
+signal	joyB        : std_logic_vector(6 downto 0) := (others => '1');
+signal	joyC        : std_logic_vector(6 downto 0) := (others => '1');
+signal	joyD        : std_logic_vector(6 downto 0) := (others => '1');
 signal	pot1        : std_logic_vector(7 downto 0);
 signal	pot2        : std_logic_vector(7 downto 0);
 signal	pot3        : std_logic_vector(7 downto 0);
@@ -346,14 +346,14 @@ begin
 		enableCia_n <= '0';
 		enableCia_p <= '0';
 
-		if sysCycle = to_unsigned(14, sysCycle'length) then -- CYCLE_VIC2
+		if sysCycle = to_unsigned(sysCycleDef'pos(CYCLE_VIC2), sysCycle'length) then -- CYCLE_VIC2
 			enableVic <= '1';
-		elsif sysCycle = to_unsigned(28, sysCycle'length) then -- CYCLE_CPUC
+		elsif sysCycle = to_unsigned(sysCycleDef'pos(CYCLE_CPUC), sysCycle'length) then -- CYCLE_CPUC
 			enableCia_n <= '1';
-		elsif sysCycle = to_unsigned(30, sysCycle'length) then -- CYCLE_CPUE
+		elsif sysCycle = to_unsigned(sysCycleDef'pos(CYCLE_CPUE), sysCycle'length) then -- CYCLE_CPUE
 			enableVic <= '1';
 			enableCpu <= '1';
-		elsif sysCycle = to_unsigned(31, sysCycle'length) then -- CYCLE_CPUF
+		elsif sysCycle = to_unsigned(sysCycleDef'pos(CYCLE_CPUF), sysCycle'length) then -- CYCLE_CPUF
 			enableCia_p <= '1';
 		end if;
 	end if;
@@ -415,7 +415,7 @@ port map (
 	pao => cia1_pai,
 	pbo => cia1_pbi,
 
-	restore_key => freeze_key,
+	restore_key => freeze_key, -- freeze not connected to c64
 	backwardsReadingEnabled => '1'
 );
 
@@ -689,6 +689,50 @@ port map (
 	irq_n => irq_cia2
 );
 
+--serialBus
+serialBus: process(clk32)
+begin
+	if rising_edge(clk32) then
+		if sysCycle = to_unsigned(sysCycleDef'pos(CYCLE_IEC1),sysCycle'length) then
+			cia2_pai(7) <= iec_data_i and not cia2_pao(5);
+			cia2_pai(6) <= iec_clk_i and not cia2_pao(4);
+		end if;
+	end if;
+end process;
+
+cia2_pai(5 downto 0) <= cia2_pao(5 downto 0);
+
+process(joyC, joyD, cia2_pbo, uart_rxd, uart_ri_in, uart_dcd_in, uart_cts, uart_dsr, uart_enable)
+begin
+	if uart_enable = '1' then
+		cia2_pbi(0) <= uart_rxd;
+		cia2_pbi(1) <= '1';
+		cia2_pbi(2) <= '1';
+		cia2_pbi(3) <= uart_ri_in;
+		cia2_pbi(4) <= uart_dcd_in;
+		cia2_pbi(5) <= '1';
+		cia2_pbi(6) <= uart_cts;
+		cia2_pbi(7) <= uart_dsr;
+	else
+		if cia2_pbo(7) = '1' then
+			cia2_pbi(3 downto 0) <= not unsigned(joyC(3 downto 0));
+		else
+			cia2_pbi(3 downto 0) <= not unsigned(joyD(3 downto 0));
+		end if;
+		if joyC(6 downto 4) /= "000" then
+			cia2_pbi(4) <= '0';
+		else
+			cia2_pbi(4) <= '1';
+		end if;
+		if joyD(6 downto 4) /= "000" then
+			cia2_pbi(5) <= '0';
+		else
+			cia2_pbi(5) <= '1';
+		end if;
+		cia2_pbi(7 downto 6) <= cia2_pbo(7 downto 6);
+	end if;
+end process;
+
 -- UART outputs... TODO connect to ftdi
 uart_txd <= cia2_pao(2);
 uart_rts <= cia2_pbo(1);
@@ -812,6 +856,7 @@ port map (
   --led(6 downto 3) <= (others => '0');
   --led(7) <= vicblank;
   led <= ps2_key(7 downto 0);
+  --led <= std_logic_vector(cia1_pbi(7 downto 0));
 
   vga2dvid_instance: entity work.vga2dvid
   generic map
