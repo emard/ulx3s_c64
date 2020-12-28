@@ -143,6 +143,7 @@ signal toddiv       : std_logic_vector(19 downto 0);
 signal toddiv3      : std_logic_vector(1 downto 0);
 
 -- video
+constant ntscMode   : std_logic := '0';
 signal vicColorIndex: unsigned(3 downto 0);
 signal vicHSync     : std_logic;
 signal vicVSync     : std_logic;
@@ -203,10 +204,10 @@ signal	ioE_ext     : std_logic;
 signal	io_data     : unsigned(7 downto 0);
 
 -- joystick interface
-signal	joyA        : std_logic_vector(6 downto 0) := (others => '1');
-signal	joyB        : std_logic_vector(6 downto 0) := (others => '1');
-signal	joyC        : std_logic_vector(6 downto 0) := (others => '1');
-signal	joyD        : std_logic_vector(6 downto 0) := (others => '1');
+signal	joyA        : std_logic_vector(6 downto 0) := (others => '0');
+signal	joyB        : std_logic_vector(6 downto 0) := (others => '0');
+signal	joyC        : std_logic_vector(6 downto 0) := (others => '0');
+signal	joyD        : std_logic_vector(6 downto 0) := (others => '0');
 signal	pot1        : std_logic_vector(7 downto 0);
 signal	pot2        : std_logic_vector(7 downto 0);
 signal	pot3        : std_logic_vector(7 downto 0);
@@ -396,12 +397,15 @@ end process;
 -- Keyboard
 -- -----------------------------------------------------------------------
 ps2recv: ps2
-	port map (
-		clk      => clk32,
-		ps2_clk  => usb_fpga_bd_dp,
-		ps2_data => usb_fpga_bd_dn,
-		ps2_key  => ps2_key
-	);
+port map (
+	clk      => clk32,
+	ps2_clk  => usb_fpga_bd_dp,
+	ps2_data => usb_fpga_bd_dn,
+	ps2_key  => ps2_key
+);
+
+-- joyA <= btn(6 downto 1) & not btn(0);
+-- joyB <= btn(6 downto 1) & not btn(0);
 
 Keyboard: entity work.fpga64_keyboard
 port map (
@@ -415,7 +419,7 @@ port map (
 	pao => cia1_pai,
 	pbo => cia1_pbi,
 
-	restore_key => freeze_key, -- freeze not connected to c64
+	restore_key => freeze_key, -- freeze_key not connected to c64
 	backwardsReadingEnabled => '1'
 );
 
@@ -688,6 +692,26 @@ port map (
 
 	irq_n => irq_cia2
 );
+
+-- generate TOD clock from stable 32 MHz
+-- Can we simply use vicVSync?
+process(clk32, reset)
+begin
+	if reset = '1' then
+		todclk <= '0';
+		toddiv <= (others => '0');
+	elsif rising_edge(clk32) then
+		toddiv <= toddiv + 1;
+		if (ntscMode = '1' and toddiv = 27082 and toddiv3 = "00") or
+			(ntscMode = '1' and toddiv = 27083 and toddiv3 /= "00") or
+			toddiv = 324999 then
+			toddiv <= (others => '0');
+			todclk <= not todclk;
+			toddiv3 <= toddiv3 + 1;
+			if toddiv3 = "10" then toddiv3 <= "00"; end if;
+		end if;
+	end if;
+end process;
 
 --serialBus
 serialBus: process(clk32)
