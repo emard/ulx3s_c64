@@ -2,8 +2,8 @@
 
 Attempt to borrow C64 mister code and compile it with opensource tools.
 
-Currently only VIC video chip is borrowed, added sync and blank signals
-required for DVI, and a bus generator to setup VIC registers.
+Correct boot picture to "READY." and blinking cursor appears
+with reported resolution 1616x300@51.6Hz on my lenovo monitor.
 
-Some picture appears 1616x300@51.6Hz on my lenovo monitor.
-I'm not sure is that signal compatible with many other monitors.
+The video signal is not likely to be compatible with every
+monitor but some should work.
