@@ -1,0 +1,57 @@
+# ******* project, board and chip name *******
+PROJECT = c64
+BOARD = ulx3s
+# 12 25 45 85
+FPGA_SIZE = 25
+FPGA_PACKAGE = 6bg381c
+# config flash: 1:SPI (standard), 4:QSPI (quad)
+FLASH_SPI = 4
+# chip: is25lp032d is25lp128f s25fl164k
+FLASH_CHIP = is25lp128f
+
+# ******* if programming with OpenOCD *******
+# using local latest openocd until in linux distribution
+OPENOCD=openocd_ft232r
+# default onboard usb-jtag
+OPENOCD_INTERFACE=$(SCRIPTS)/ft231x.ocd
+# ulx3s-jtag-passthru
+#OPENOCD_INTERFACE=$(SCRIPTS)/ft231x2.ocd
+# ulx2s
+#OPENOCD_INTERFACE=$(SCRIPTS)/ft232r.ocd
+# external jtag
+#OPENOCD_INTERFACE=$(SCRIPTS)/ft2232.ocd
+
+# ******* design files *******
+CONSTRAINTS = ../constraints/ulx3s_v20.lpf
+TOP_MODULE = top_ulx3s_v20_c64
+TOP_MODULE_FILE = ../rtl/$(TOP_MODULE).vhd
+
+VERILOG_FILES = \
+  ../rtl/ps2.v \
+  ../rtl/mos6526.v \
+
+VHDL_FILES = \
+  $(TOP_MODULE_FILE) \
+  ../rtl/ecp5/ecp5pll.vhd \
+  ../rtl/cpu_6510.vhd \
+  ../rtl/t65/T65.vhd \
+  ../rtl/t65/T65_Pack.vhd \
+  ../rtl/t65/T65_ALU.vhd \
+  ../rtl/t65/T65_MCode.vhd \
+  ../rtl/fpga64_buslogic.vhd \
+  ../rtl/bram_true2p_2clk.vhd \
+  ../rtl/dprom_kernal.vhd \
+  ../rtl/roms/rom_kernal_pack.vhd \
+  ../rtl/dprom_chargen.vhd \
+  ../rtl/roms/rom_chargen_pack.vhd \
+  ../rtl/fpga64_keyboard.vhd \
+  ../rtl/video_vicII_656x.vhd \
+  ../rtl/fpga64_rgbcolor.vhd \
+  ../rtl/dvi/vga.vhd \
+  ../rtl/dvi/vga2dvid.vhd \
+  ../rtl/dvi/tmds_encoder.vhd \
+
+SCRIPTS = ../scripts
+include $(SCRIPTS)/trellis_path.mk
+include $(SCRIPTS)/diamond_path.mk
+include $(SCRIPTS)/diamond_main.mk
