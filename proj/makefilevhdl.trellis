@@ -19,11 +19,13 @@ OPENOCD_INTERFACE=$(SCRIPTS)/ft231x.ocd
 
 # ******* design files *******
 CONSTRAINTS = ../constraints/ulx3s_v20.lpf
-TOP_MODULE = top_victest
-TOP_MODULE = top_bustest
-TOP_MODULE_FILE = ../rtl/test/$(TOP_MODULE).vhd
+#TOP_MODULE = top_victest
+TOP_MODULE = top_ulx3s_v20_c64
+TOP_MODULE_FILE = ../rtl/$(TOP_MODULE).vhd
 
-VERILOG_FILES = ../rtl/mos6526.v \
+VERILOG_FILES = \
+  ../rtl/ps2.v \
+  ../rtl/mos6526.v \
 
 GHDL_FILES = \
   $(TOP_MODULE_FILE) \
@@ -39,6 +41,7 @@ GHDL_FILES = \
   ../rtl/roms/rom_kernal_pack.vhd \
   ../rtl/dprom_chargen.vhd \
   ../rtl/roms/rom_chargen_pack.vhd \
+  ../rtl/fpga64_keyboard.vhd \
   ../rtl/video_vicII_656x.vhd \
   ../rtl/fpga64_rgbcolor.vhd \
   ../rtl/dvi/vga.vhd \

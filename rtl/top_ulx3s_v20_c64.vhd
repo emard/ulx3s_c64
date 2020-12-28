@@ -10,7 +10,7 @@ use IEEE.numeric_std.ALL;
 --library ecp5u;
 --use ecp5u.components.all;
 
-entity top_bustest is
+entity top_ulx3s_v20_c64 is
   generic
   (
     victest  : boolean := false -- true: fast compile VIC color test, false: normal C64 with CPU
@@ -22,6 +22,9 @@ entity top_bustest is
     -- Onboard blinky
     led: out std_logic_vector(7 downto 0);
     btn: in std_logic_vector(6 downto 0);
+
+    usb_fpga_pu_dp, usb_fpga_pu_dn: out std_logic := '1';
+    usb_fpga_bd_dp, usb_fpga_bd_dn: in std_logic;
 
     -- GPIO (some are shared with wifi and adc)
     gp, gn: inout std_logic_vector(27 downto 0) := (others => 'Z');
@@ -36,7 +39,7 @@ entity top_bustest is
   );
 end;
 
-architecture Behavioral of top_bustest is
+architecture Behavioral of top_ulx3s_v20_c64 is
 
   signal clocks: std_logic_vector(3 downto 0);
   signal clk_pixel, clk_shift: std_logic;
@@ -80,6 +83,8 @@ signal enablePixel  : std_logic;
 signal irq_cia1     : std_logic;
 signal irq_cia2     : std_logic;
 signal irq_vic      : std_logic;
+
+signal ps2_key      : std_logic_vector(10 downto 0);
 
 signal systemWe     : std_logic;
 signal pulseWrRam   : std_logic;
@@ -274,6 +279,15 @@ component mos6526
 	);
 end component; 
 
+component ps2
+	port (
+		clk           : in  std_logic;
+		ps2_clk       : in  std_logic;
+		ps2_data      : in  std_logic;
+		ps2_key       : out std_logic_vector(10 downto 0)
+	);
+end component; 
+
 ----------------------------------------------------------
 begin
   clk_c64_pll: entity work.ecp5pll
@@ -377,6 +391,33 @@ begin
 		end if;
 	end if;
 end process;
+
+-- -----------------------------------------------------------------------
+-- Keyboard
+-- -----------------------------------------------------------------------
+ps2recv: ps2
+	port map (
+		clk      => clk32,
+		ps2_clk  => usb_fpga_bd_dp,
+		ps2_data => usb_fpga_bd_dn,
+		ps2_key  => ps2_key
+	);
+
+Keyboard: entity work.fpga64_keyboard
+port map (
+	clk => clk32,
+	ps2_key => ps2_key,
+
+	joyA => not unsigned(joyA(4 downto 0)),
+	joyB => not unsigned(joyB(4 downto 0)),
+	pai => cia1_pao,
+	pbi => cia1_pbo,
+	pao => cia1_pai,
+	pbo => cia1_pbi,
+
+	restore_key => freeze_key,
+	backwardsReadingEnabled => '1'
+);
 
 -- -----------------------------------------------------------------------
 -- Local signal to outside world
@@ -765,11 +806,12 @@ port map (
 
 ---------------------------------------------------------
 
-  led(0) <= vichsync;
-  led(1) <= vicvsync;
-  led(2) <= reset;
-  led(6 downto 3) <= (others => '0');
-  led(7) <= vicblank;
+  --led(0) <= vichsync;
+  --led(1) <= vicvsync;
+  --led(2) <= reset;
+  --led(6 downto 3) <= (others => '0');
+  --led(7) <= vicblank;
+  led <= ps2_key(7 downto 0);
 
   vga2dvid_instance: entity work.vga2dvid
   generic map
