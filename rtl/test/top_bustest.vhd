@@ -25,6 +25,11 @@ entity top_bustest is
 
     -- GPIO (some are shared with wifi and adc)
     gp, gn: inout std_logic_vector(27 downto 0) := (others => 'Z');
+    
+    ftdi_txd: in std_logic;
+    ftdi_rxd: out std_logic;
+    ftdi_nrts: in std_logic;
+    ftdi_ndtr: in std_logic;
 
     -- Digital Video (differential outputs)
     gpdi_dp: out std_logic_vector(3 downto 0)
@@ -460,6 +465,12 @@ port map (
 cass_motor <= cpuIO(5);
 cass_write <= cpuIO(3);
 
+-- -----------------------------------------------------------------------
+-- Interrupt lines
+-- -----------------------------------------------------------------------
+irqLoc <= irq_cia1 and irq_vic and irq_n; 
+nmiLoc <= irq_cia2 and nmi_n;
+
 -- 64K RAM (BRAM)
 ram64k: entity work.bram_true2p_2clk
 generic map
@@ -496,6 +507,14 @@ port map (
 	data_out_a => colorQ,
 	clk_b      => '0'
 );
+
+process(clk32)
+begin
+	if rising_edge(clk32) then
+		colorWe <= (cs_color and pulseWrRam);
+		colorData <= colorQ;
+	end if;
+end process;
 
 -- -----------------------------------------------------------------------
 -- PLA and bus-switches with ROM
@@ -629,6 +648,24 @@ port map (
 	irq_n => irq_cia2
 );
 
+-- UART outputs... TODO connect to ftdi
+uart_txd <= cia2_pao(2);
+uart_rts <= cia2_pbo(1);
+uart_dtr <= cia2_pbo(2);
+uart_ri_out <= cia2_pbo(3);
+uart_dcd_out <= cia2_pbo(4);
+
+-- -----------------------------------------------------------------------
+-- Cartridge port lines LCA
+-- -----------------------------------------------------------------------
+romL <= cs_romL;
+romH <= cs_romH;
+IOE <= cs_ioE;
+IOF <= cs_ioF;
+UMAXromH <= cs_UMAXromH;
+CPU_hasbus <= cpuHasBus;
+
+
 -- -----------------------------------------------------------------------
 -- VIC-II video interface chip
 -- -----------------------------------------------------------------------
@@ -650,6 +687,27 @@ end process;
 -- as color information the lower 4 bits of the opcode after the access to $d011.
 vicDiAec <= vicBus when aec = '0' else vicDi;
 colorDataAec <= cpuDi(3 downto 0) when aec = '0' else colorData;
+
+-- -----------------------------------------------------------------------
+-- VIC bank to address lines
+-- -----------------------------------------------------------------------
+-- The glue logic on a C64C will generate a glitch during 10 <-> 01
+-- generating 00 (in other words, bank 3) for one cycle.
+--
+-- When using the data direction register to change a single bit 0->1
+-- (in other words, decreasing the video bank number by 1 or 2),
+-- the bank change is delayed by one cycle. This effect is unstable.
+process(clk32)
+begin
+	if rising_edge(clk32) then
+		if phi0_cpu = '0' and enableVic = '1' then
+			vicAddr1514 <= not cia2_pao(1 downto 0);
+		end if;
+	end if;
+end process;
+
+-- emulate only the first glitch (enough for Undead from Emulamer)
+vicAddr(15 downto 14) <= "11" when ((vicAddr1514 xor not cia2_pao(1 downto 0)) = "11") and (cia2_pao(0) /= cia2_pao(1)) else not unsigned(cia2_pao(1 downto 0));
 
 vic: entity work.video_vicii_656x
 generic map (
