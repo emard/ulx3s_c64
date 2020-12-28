@@ -34,6 +34,19 @@ entity top_ulx3s_v20_c64 is
     ftdi_nrts: in std_logic;
     ftdi_ndtr: in std_logic;
 
+    -- WiFi additional signaling
+    wifi_txd: in std_logic;
+    wifi_rxd: out std_logic;
+    wifi_gpio0  : inout std_logic;
+    wifi_gpio5  : inout std_logic;
+    wifi_gpio16 : inout std_logic;
+    wifi_gpio17 : inout std_logic;
+
+    -- SD card
+    sd_d: inout std_logic_vector(3 downto 0);
+    sd_clk, sd_cmd: inout std_logic;
+    sd_cdn: inout std_logic;
+
     -- Digital Video (differential outputs)
     gpdi_dp: out std_logic_vector(3 downto 0)
   );
@@ -53,6 +66,12 @@ architecture Behavioral of top_ulx3s_v20_c64 is
 constant resetCycles : integer := 4095;
 signal clk32: std_logic;
 signal clocks_c64: std_logic_vector(3 downto 0);
+
+-- after OSD module 
+signal osd_vga_r, osd_vga_g, osd_vga_b: std_logic_vector(7 downto 0);
+signal osd_vga_hsync, osd_vga_vsync, osd_vga_blank: std_logic;
+-- invert CS to get CSN
+signal spi_csn: std_logic;
 
 -------------------------------------
 -- System state machine
@@ -292,6 +311,10 @@ end component;
 
 ----------------------------------------------------------
 begin
+  -- esp32 micropython console
+  wifi_rxd <= ftdi_txd;
+  ftdi_rxd <= wifi_txd;
+
   clk_c64_pll: entity work.ecp5pll
   generic map
   (
@@ -882,7 +905,32 @@ port map (
   --led(6 downto 3) <= (others => '0');
   --led(7) <= vicblank;
   led <= ps2_key(7 downto 0);
-  --led <= std_logic_vector(cia1_pbi(7 downto 0));
+
+  -- SPI OSD pipeline
+  spi_osd_inst: entity work.spi_osd
+  generic map
+  (
+    c_start_x => 26, c_start_y =>  6, -- xy centered
+    c_chars_x => 64, c_chars_y => 18, -- xy size, slightly less than full screen
+    c_bits_x  => 11, c_bits_y  =>  9, -- xy counters bits 
+    c_transparency => 1, -- 1:semi-tranparent 0:opaque
+    c_init_on      => 1, -- 1:OSD initially shown without any SPI init
+    c_char_file    => "osd.mem", -- initial OSD content
+    c_font_file    => "font_bizcat8x16.mem"
+  )
+  port map
+  (
+    clk_pixel => clk_pixel, clk_pixel_ena => '1',
+    i_r => std_logic_vector(vic_r(7 downto 0)),
+    i_g => std_logic_vector(vic_g(7 downto 0)),
+    i_b => std_logic_vector(vic_b(7 downto 0)),
+    i_hsync => vicHSync, i_vsync => vicVSync, i_blank => vicBlank,
+    i_csn => spi_csn, i_sclk => wifi_gpio16, i_mosi => sd_d(1), o_miso => open,
+    o_r => osd_vga_r, o_g => osd_vga_g, o_b => osd_vga_b,
+    o_hsync => osd_vga_hsync, o_vsync => osd_vga_vsync, o_blank => osd_vga_blank
+  );
+  spi_csn <= not wifi_gpio5;
+  sd_cdn <= sd_d(1) or sd_d(2); -- sd_cdn is not connected, this is to enable pullups sd_d(2 downto 1)
 
   vga2dvid_instance: entity work.vga2dvid
   generic map
@@ -895,12 +943,12 @@ port map (
     clk_pixel => clk_pixel,
     clk_shift => clk_shift,
 
-    in_red    => std_logic_vector(vic_r),
-    in_green  => std_logic_vector(vic_g),
-    in_blue   => std_logic_vector(vic_b),
-    in_hsync  => vicHSync,
-    in_vsync  => vicVSync,
-    in_blank  => vicBlank,
+    in_red    => osd_vga_r,
+    in_green  => osd_vga_g,
+    in_blue   => osd_vga_b,
+    in_hsync  => osd_vga_hsync,
+    in_vsync  => osd_vga_vsync,
+    in_blank  => osd_vga_blank,
 
     -- single-ended output ready for differential buffers
     out_red   => dvid_red,

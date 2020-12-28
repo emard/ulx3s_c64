@@ -27,29 +27,33 @@ TOP_MODULE = top_ulx3s_v20_c64
 TOP_MODULE_FILE = ../rtl/$(TOP_MODULE).vhd
 
 VERILOG_FILES = \
-  ../rtl/ps2.v \
-  ../rtl/mos6526.v \
+../rtl/ps2.v \
+../rtl/mos6526.v \
+../rtl/osd/osd.v \
+../rtl/osd/spirw_slave_v.v \
+../rtl/osd/spi_osd_v.v \
 
 VHDL_FILES = \
-  $(TOP_MODULE_FILE) \
-  ../rtl/ecp5/ecp5pll.vhd \
-  ../rtl/cpu_6510.vhd \
-  ../rtl/t65/T65.vhd \
-  ../rtl/t65/T65_Pack.vhd \
-  ../rtl/t65/T65_ALU.vhd \
-  ../rtl/t65/T65_MCode.vhd \
-  ../rtl/fpga64_buslogic.vhd \
-  ../rtl/bram_true2p_2clk.vhd \
-  ../rtl/dprom_kernal.vhd \
-  ../rtl/roms/rom_kernal_pack.vhd \
-  ../rtl/dprom_chargen.vhd \
-  ../rtl/roms/rom_chargen_pack.vhd \
-  ../rtl/fpga64_keyboard.vhd \
-  ../rtl/video_vicII_656x.vhd \
-  ../rtl/fpga64_rgbcolor.vhd \
-  ../rtl/dvi/vga.vhd \
-  ../rtl/dvi/vga2dvid.vhd \
-  ../rtl/dvi/tmds_encoder.vhd \
+$(TOP_MODULE_FILE) \
+../rtl/ecp5/ecp5pll.vhd \
+../rtl/cpu_6510.vhd \
+../rtl/t65/T65.vhd \
+../rtl/t65/T65_Pack.vhd \
+../rtl/t65/T65_ALU.vhd \
+../rtl/t65/T65_MCode.vhd \
+../rtl/fpga64_buslogic.vhd \
+../rtl/bram_true2p_2clk.vhd \
+../rtl/dprom_kernal.vhd \
+../rtl/roms/rom_kernal_pack.vhd \
+../rtl/dprom_chargen.vhd \
+../rtl/roms/rom_chargen_pack.vhd \
+../rtl/fpga64_keyboard.vhd \
+../rtl/video_vicII_656x.vhd \
+../rtl/fpga64_rgbcolor.vhd \
+../rtl/osd/spi_osd.vhd \
+../rtl/dvi/vga.vhd \
+../rtl/dvi/vga2dvid.vhd \
+../rtl/dvi/tmds_encoder.vhd \
 
 SCRIPTS = ../scripts
 include $(SCRIPTS)/trellis_path.mk
