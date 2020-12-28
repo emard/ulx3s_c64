@@ -1,6 +1,7 @@
 # ULX3S C64 attempts from mister
 
-Attempt to borrow C64 mister code and compile it with opensource tools.
+Attempt to borrow [C64_MiSTer](https://github.com/MiSTer-devel/C64_MiSTer)
+code and compile it with opensource tools.
 
 Boot picture with "READY." prompt and blinking cursor appears
 with reported resolution 1616x300@51.6Hz on my lenovo monitor.
