@@ -33,23 +33,23 @@ end fpga64_rgbcolor;
 architecture Behavioral of fpga64_rgbcolor is
 type t64_colors is array(0 to 15) of unsigned(23 downto 0);
 constant c64_colors : t64_colors :=
-( -- colors from https://www.c64-wiki.com/wiki/Color
-x"000000", -- 0 black
-x"FFFFFF", -- 1 white
-x"880000", -- 2 red
-x"AAFFEE", -- 3 cyan
-x"CC44CC", -- 4 purple
-x"00CC55", -- 5 green
-x"0000AA", -- 6 blue
-x"EEEE77", -- 7 yellow
-x"DD8855", -- 8 orange
-x"664400", -- 9 brown
-x"FF7777", -- A light red
-x"333333", -- B dark grey
-x"777777", -- C grey
-x"AAFF66", -- D light green
-x"0088FF", -- E light blue
-x"BBBBBB"  -- F light grey
+(
+x"000000", -- 0
+x"FFFFFF", -- 1
+x"68372B", -- 2
+x"70A4B2", -- 3
+x"6F3D86", -- 4
+x"588D43", -- 5
+x"352879", -- 6
+x"B8C76F", -- 7
+x"6F4F25", -- 8
+x"433900", -- 9
+x"9A6759", -- A
+x"444444", -- B
+x"6C6C6C", -- C
+x"9AD284", -- D
+x"6C5EB5", -- E
+x"959595"  -- F
 );
 begin
 	r <= c64_colors(to_integer(index))(23 downto 16);
