@@ -10,7 +10,7 @@ monitor but some should work.
 
 This repo comes with free generic ROMs from
 [MEGA65](https://github.com/MEGA65/open-roms/tree/master/bin) project.
-The script "getrom.sh" in "roms" directory will help real stuff for
+The script "getrom.sh" in "roms" directory will get real stuff for
 small recompilation excercise.
 
 Keyboard works.
