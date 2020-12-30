@@ -27,7 +27,7 @@ entity top_ulx3s_v20_c64 is
     usb_fpga_bd_dp, usb_fpga_bd_dn: in std_logic;
 
     -- GPIO (some are shared with wifi and adc)
-    gp, gn: inout std_logic_vector(27 downto 0) := (others => 'Z');
+    gp, gn: in std_logic_vector(27 downto 0);
     
     ftdi_txd: in std_logic;
     ftdi_rxd: out std_logic;
@@ -37,9 +37,9 @@ entity top_ulx3s_v20_c64 is
     -- WiFi additional signaling
     wifi_txd: in std_logic;
     wifi_rxd: out std_logic;
-    wifi_gpio0  : inout std_logic;
-    wifi_gpio5  : inout std_logic;
-    wifi_gpio16 : inout std_logic;
+    wifi_gpio0  : out std_logic;
+    wifi_gpio5  : in std_logic;
+    wifi_gpio16 : out std_logic;
     wifi_gpio17 : inout std_logic;
 
     -- SD card
@@ -71,7 +71,12 @@ signal clocks_c64: std_logic_vector(3 downto 0);
 signal osd_vga_r, osd_vga_g, osd_vga_b: std_logic_vector(7 downto 0);
 signal osd_vga_hsync, osd_vga_vsync, osd_vga_blank: std_logic;
 -- invert CS to get CSN
-signal spi_csn: std_logic;
+signal spi_irq, spi_csn, spi_miso, spi_mosi, spi_sck: std_logic;
+signal spi_ram_wr, spi_ram_rd: std_logic;
+signal spi_ram_wr_data, spi_ram_rd_data: std_logic_vector(7 downto 0);
+signal spi_ram_addr: std_logic_vector(16 downto 0); -- MSB for ROMs
+signal R_cpu_control: std_logic_vector(7 downto 0);
+signal R_btn_joy: std_logic_vector(btn'range);
 
 -------------------------------------
 -- System state machine
@@ -560,6 +565,36 @@ port map
 	clk_b      => '0'
 );
 
+process(clk32)
+begin
+  if rising_edge(clk32) then
+     R_btn_joy <= btn;
+  end if;
+end process;
+
+-- disabled, something doesn't work
+spi_slave_ram_btn: entity work.spi_ram_btn
+generic map
+(
+  c_sclk_capable_pin => 0,
+  c_addr_bits => 32
+)
+port map
+(
+  clk => clk32,
+  csn => spi_csn,
+  sclk => spi_sck,
+  mosi => spi_mosi,
+  miso => spi_miso,
+  btn => R_btn_joy,
+  irq => spi_irq,
+  wr => spi_ram_wr,
+  rd => spi_ram_rd,
+  addr(16 downto 0) => spi_ram_addr,
+  data_in => spi_ram_wr_data,
+  data_out => spi_ram_rd_data
+);
+
 -- -----------------------------------------------------------------------
 -- Color RAM
 -- -----------------------------------------------------------------------
@@ -899,20 +934,21 @@ port map (
 
 ---------------------------------------------------------
 
-  --led(0) <= vichsync;
-  --led(1) <= vicvsync;
-  --led(2) <= reset;
-  --led(6 downto 3) <= (others => '0');
-  --led(7) <= vicblank;
-  led <= ps2_key(7 downto 0);
+  --led <= (others => '0');
+  --led <= spi_ram_wr_data;
+  led(7 downto 3) <= (others => '0');
+  led(2) <= spi_csn;
+  led(1) <= spi_sck;
+  led(0) <= spi_mosi;
 
   -- SPI OSD pipeline
   spi_osd_inst: entity work.spi_osd
   generic map
   (
-    c_start_x => 26, c_start_y =>  6, -- xy centered
-    c_chars_x => 64, c_chars_y => 18, -- xy size, slightly less than full screen
-    c_bits_x  => 11, c_bits_y  =>  9, -- xy counters bits 
+    c_start_x =>  6, c_start_y =>  6, -- xy centered
+    c_char_bits_x => 5, c_chars_y => 16, -- xy size, slightly less than full screen
+    c_bits_x  => 11, c_bits_y  =>  9, -- xy counters bits
+    c_inverse      => 1, -- 1:support inverse video 0:no inverse video
     c_transparency => 1, -- 1:semi-tranparent 0:opaque
     c_init_on      => 1, -- 1:OSD initially shown without any SPI init
     c_char_file    => "osd.mem", -- initial OSD content
@@ -920,17 +956,38 @@ port map (
   )
   port map
   (
-    clk_pixel => clk_pixel, clk_pixel_ena => '1',
+    clk_pixel => clk_pixel, clk_pixel_ena => enablePixel,
     i_r => std_logic_vector(vic_r(7 downto 0)),
     i_g => std_logic_vector(vic_g(7 downto 0)),
     i_b => std_logic_vector(vic_b(7 downto 0)),
     i_hsync => vicHSync, i_vsync => vicVSync, i_blank => vicBlank,
-    i_csn => spi_csn, i_sclk => wifi_gpio16, i_mosi => sd_d(1), o_miso => open,
+    i_csn => spi_csn, i_sclk => spi_sck, i_mosi => spi_mosi,
+    --o_miso => open,
     o_r => osd_vga_r, o_g => osd_vga_g, o_b => osd_vga_b,
     o_hsync => osd_vga_hsync, o_vsync => osd_vga_vsync, o_blank => osd_vga_blank
   );
+  --process(clk_pixel)
+  --begin
+  --	if rising_edge(clk_pixel)
+  --	then
+  --		r_spi_csn  <= not wifi_gpio5;
+  --		-- r_spi_mosi <= sd_d(1), -- wifi_gpio4
+  --		r_spi_mosi <= gn(11); -- wifi_gpio25
+  --		r_spi_sclk <= wifi_gpio16;
+  --            r_spi_csn <= not wifi_gpio5;
+  --            r_spi_sck <= gn(11); -- wifi_gpio25
+  --            r_spi_miso <= gp(11); -- wifi_gpio26
+  --	end if;
+  --end process;
+
+  -- ESP32 -> FPGA
   spi_csn <= not wifi_gpio5;
-  sd_cdn <= sd_d(1) or sd_d(2); -- sd_cdn is not connected, this is to enable pullups sd_d(2 downto 1)
+  spi_sck <= gn(11); -- wifi_gpio25
+  spi_mosi <= gp(11); -- wifi_gpio26
+  -- FPGA -> ESP32
+  wifi_gpio16 <= spi_miso;
+  wifi_gpio0 <= not spi_irq; -- wifi_gpio0 IRQ active low
+
 
   vga2dvid_instance: entity work.vga2dvid
   generic map

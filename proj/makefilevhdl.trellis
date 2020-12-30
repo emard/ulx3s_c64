@@ -26,9 +26,10 @@ TOP_MODULE_FILE = ../rtl/$(TOP_MODULE).vhd
 VERILOG_FILES = \
 ../rtl/ps2.v \
 ../rtl/mos6526.v \
+../rtl/osd/spi_ram_btn_v.v \
+../rtl/osd/spi_osd_v.v \
 ../rtl/osd/osd.v \
 ../rtl/osd/spirw_slave_v.v \
-../rtl/osd/spi_osd_v.v \
 
 GHDL_FILES = \
 $(TOP_MODULE_FILE) \
@@ -47,6 +48,7 @@ $(TOP_MODULE_FILE) \
 ../rtl/fpga64_keyboard.vhd \
 ../rtl/video_vicII_656x.vhd \
 ../rtl/fpga64_rgbcolor.vhd \
+../rtl/osd/spi_ram_btn.vhd \
 ../rtl/osd/spi_osd.vhd \
 ../rtl/dvi/vga.vhd \
 ../rtl/dvi/vga2dvid.vhd \
@@ -54,7 +56,7 @@ $(TOP_MODULE_FILE) \
 
 # synthesis options
 #YOSYS_OPTIONS = -abc9
-#NEXTPNR_OPTIONS = --router router2
+NEXTPNR_OPTIONS = --router router2
 #NEXTPNR_OPTIONS = --timing-allow-fail
 
 SCRIPTS = ../scripts
