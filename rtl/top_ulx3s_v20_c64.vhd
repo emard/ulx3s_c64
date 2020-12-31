@@ -13,7 +13,7 @@ use IEEE.numeric_std.ALL;
 entity top_ulx3s_v20_c64 is
   generic
   (
-    victest  : boolean := false -- true: fast compile VIC color test, false: normal C64 with CPU
+    victest: boolean := false -- true: fast compile VIC color test, false: normal C64 with CPU
   );
   port
   (
@@ -28,7 +28,7 @@ entity top_ulx3s_v20_c64 is
 
     -- GPIO (some are shared with wifi and adc)
     gp, gn: in std_logic_vector(27 downto 0);
-    
+
     ftdi_txd: in std_logic;
     ftdi_rxd: out std_logic;
     ftdi_nrts: in std_logic;
@@ -39,13 +39,8 @@ entity top_ulx3s_v20_c64 is
     wifi_rxd: out std_logic;
     wifi_gpio0  : out std_logic;
     wifi_gpio5  : in std_logic;
-    wifi_gpio16 : out std_logic;
-    wifi_gpio17 : inout std_logic;
-
-    -- SD card
-    sd_d: inout std_logic_vector(3 downto 0);
-    sd_clk, sd_cmd: inout std_logic;
-    sd_cdn: inout std_logic;
+    wifi_gpio16 : inout std_logic;
+    --wifi_gpio17 : inout std_logic;
 
     -- Digital Video (differential outputs)
     gpdi_dp: out std_logic_vector(3 downto 0)
@@ -74,7 +69,7 @@ signal osd_vga_hsync, osd_vga_vsync, osd_vga_blank: std_logic;
 signal spi_irq, spi_csn, spi_miso, spi_mosi, spi_sck: std_logic;
 signal spi_ram_wr, spi_ram_rd: std_logic;
 signal spi_ram_wr_data, spi_ram_rd_data: std_logic_vector(7 downto 0);
-signal spi_ram_addr: std_logic_vector(16 downto 0); -- MSB for ROMs
+signal spi_ram_addr: std_logic_vector(31 downto 0); -- MSB for ROMs
 signal R_cpu_control: std_logic_vector(7 downto 0);
 signal R_btn_joy: std_logic_vector(btn'range);
 
@@ -560,9 +555,7 @@ port map
 	addr_a     => ramAddr,
 	we_a       => ramWeCE,
 	data_in_a  => ramDataOut,
-	data_out_a => ramDataIn,
-	
-	clk_b      => '0'
+	data_out_a => ramDataIn
 );
 
 process(clk32)
@@ -585,12 +578,12 @@ port map
   csn => spi_csn,
   sclk => spi_sck,
   mosi => spi_mosi,
-  miso => spi_miso,
+  miso => wifi_gpio16,
   btn => R_btn_joy,
   irq => spi_irq,
   wr => spi_ram_wr,
   rd => spi_ram_rd,
-  addr(16 downto 0) => spi_ram_addr,
+  addr => spi_ram_addr,
   data_in => spi_ram_wr_data,
   data_out => spi_ram_rd_data
 );
@@ -936,17 +929,18 @@ port map (
 
   --led <= (others => '0');
   --led <= spi_ram_wr_data;
-  led(7 downto 3) <= (others => '0');
-  led(2) <= spi_csn;
-  led(1) <= spi_sck;
-  led(0) <= spi_mosi;
+  led <= spi_ram_addr(7 downto 0);
+  --led(7 downto 3) <= (others => '0');
+  --led(2) <= spi_csn;
+  --led(1) <= spi_sck;
+  --led(0) <= spi_mosi;
 
   -- SPI OSD pipeline
   spi_osd_inst: entity work.spi_osd
   generic map
   (
     c_start_x =>  6, c_start_y =>  6, -- xy centered
-    c_char_bits_x => 5, c_chars_y => 16, -- xy size, slightly less than full screen
+    c_char_bits_x => 6, c_chars_y => 16, -- xy size, slightly less than full screen
     c_bits_x  => 11, c_bits_y  =>  9, -- xy counters bits
     c_inverse      => 1, -- 1:support inverse video 0:no inverse video
     c_transparency => 1, -- 1:semi-tranparent 0:opaque
@@ -956,13 +950,12 @@ port map (
   )
   port map
   (
-    clk_pixel => clk_pixel, clk_pixel_ena => enablePixel,
+    clk_pixel => clk_pixel, clk_pixel_ena => sysCycle(0),
     i_r => std_logic_vector(vic_r(7 downto 0)),
     i_g => std_logic_vector(vic_g(7 downto 0)),
     i_b => std_logic_vector(vic_b(7 downto 0)),
     i_hsync => vicHSync, i_vsync => vicVSync, i_blank => vicBlank,
     i_csn => spi_csn, i_sclk => spi_sck, i_mosi => spi_mosi,
-    --o_miso => open,
     o_r => osd_vga_r, o_g => osd_vga_g, o_b => osd_vga_b,
     o_hsync => osd_vga_hsync, o_vsync => osd_vga_vsync, o_blank => osd_vga_blank
   );
@@ -985,8 +978,9 @@ port map (
   spi_sck <= gn(11); -- wifi_gpio25
   spi_mosi <= gp(11); -- wifi_gpio26
   -- FPGA -> ESP32
-  wifi_gpio16 <= spi_miso;
+  --wifi_gpio16 <= spi_miso;
   wifi_gpio0 <= not spi_irq; -- wifi_gpio0 IRQ active low
+  --wifi_gpio0 <= R_btn_joy(0);
 
 
   vga2dvid_instance: entity work.vga2dvid
