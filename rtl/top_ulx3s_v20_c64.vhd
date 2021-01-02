@@ -68,10 +68,14 @@ signal osd_vga_hsync, osd_vga_vsync, osd_vga_blank: std_logic;
 -- invert CS to get CSN
 signal spi_irq, spi_csn, spi_miso, spi_mosi, spi_sck: std_logic;
 signal spi_ram_wr, spi_ram_rd: std_logic;
-signal spi_ram_wr_data, spi_ram_rd_data: std_logic_vector(7 downto 0);
+signal spi_ram_wr_data: std_logic_vector(7 downto 0);
 signal spi_ram_addr: std_logic_vector(31 downto 0); -- MSB for ROMs
 signal R_cpu_control: std_logic_vector(7 downto 0);
 signal R_btn_joy: std_logic_vector(btn'range);
+
+signal bram_spi_cs, bram_spi_we, bram_mux_we: std_logic;
+signal bram_mux_addr: unsigned(15 downto 0);
+signal bram_mux_wr_data: unsigned(7 downto 0);
 
 -------------------------------------
 -- System state machine
@@ -541,6 +545,12 @@ cass_write <= cpuIO(3);
 irqLoc <= irq_cia1 and irq_vic and irq_n; 
 nmiLoc <= irq_cia2 and nmi_n;
 
+bram_spi_cs <= '1' when spi_ram_addr(31 downto 24) = x"00" else '0';
+bram_spi_we <= bram_spi_cs and spi_ram_wr;
+bram_mux_we <= '1' when bram_spi_we = '1' else ramWeCE;
+bram_mux_addr <= unsigned(spi_ram_addr(15 downto 0)) when bram_spi_we = '1' else ramAddr;
+bram_mux_wr_data <= unsigned(spi_ram_wr_data) when bram_spi_we = '1' else ramDataOut;
+
 -- 64K RAM (BRAM)
 ram64k: entity work.bram_true2p_2clk
 generic map
@@ -552,11 +562,15 @@ generic map
 port map
 (
 	clk_a      => clk32,
-	addr_a     => ramAddr,
-	we_a       => ramWeCE,
-	data_in_a  => ramDataOut,
+	--addr_a     => ramAddr,
+	--we_a       => ramWeCE,
+	--data_in_a  => ramDataOut,
+	addr_a     => bram_mux_addr,
+	we_a       => bram_mux_we,
+	data_in_a  => bram_mux_wr_data,
 	data_out_a => ramDataIn
 );
+
 
 process(clk32)
 begin
@@ -565,13 +579,13 @@ begin
   end if;
 end process;
 
-  -- ESP32 -> FPGA
-  spi_csn <= not wifi_gpio5;
-  spi_sck <= gn(11); -- wifi_gpio25
-  spi_mosi <= gp(11); -- wifi_gpio26
-  -- FPGA -> ESP32
-  wifi_gpio16 <= spi_miso;
-  wifi_gpio0 <= not spi_irq; -- wifi_gpio0 IRQ active low
+-- ESP32 -> FPGA
+spi_csn <= not wifi_gpio5;
+spi_sck <= gn(11); -- wifi_gpio25
+spi_mosi <= gp(11); -- wifi_gpio26
+-- FPGA -> ESP32
+wifi_gpio16 <= spi_miso;
+wifi_gpio0 <= not spi_irq; -- wifi_gpio0 IRQ active low
 
 -- disabled, something doesn't work
 spi_slave_ram_btn: entity work.spi_ram_btn
@@ -592,8 +606,8 @@ port map
   wr => spi_ram_wr,
   rd => spi_ram_rd,
   addr => spi_ram_addr,
-  data_in => spi_ram_wr_data,
-  data_out => spi_ram_rd_data
+  data_in => std_logic_vector(ramDataIn),
+  data_out => spi_ram_wr_data
 );
 
 -- -----------------------------------------------------------------------
@@ -935,24 +949,18 @@ port map (
 
 ---------------------------------------------------------
 
-  --led <= (others => '0');
-  --led <= spi_ram_wr_data;
   led <= spi_ram_addr(7 downto 0);
-  --led(7 downto 3) <= (others => '0');
-  --led(2) <= spi_csn;
-  --led(1) <= spi_sck;
-  --led(0) <= spi_mosi;
 
   -- SPI OSD pipeline
   spi_osd_inst: entity work.spi_osd
   generic map
   (
-    c_start_x      =>  6, c_start_y =>  6, -- xy centered
+    c_start_x      =>128, c_start_y =>  6, -- xy centered
     c_char_bits_x  =>  6, c_chars_y => 18, -- xy size, slightly less than full screen
     c_bits_x       => 11, c_bits_y  =>  9, -- xy counters bits
     c_inverse      =>  1, -- 1:support inverse video 0:no inverse video
     c_transparency =>  1, -- 1:semi-tranparent 0:opaque
-    c_init_on      =>  1, -- 1:OSD initially shown without any SPI init
+    c_init_on      =>  0, -- 1:OSD initially shown without any SPI init
     c_char_file    => "osd.mem", -- initial OSD content
     c_font_file    => "font_bizcat8x16.mem"
   )
