@@ -565,6 +565,14 @@ begin
   end if;
 end process;
 
+  -- ESP32 -> FPGA
+  spi_csn <= not wifi_gpio5;
+  spi_sck <= gn(11); -- wifi_gpio25
+  spi_mosi <= gp(11); -- wifi_gpio26
+  -- FPGA -> ESP32
+  wifi_gpio16 <= spi_miso;
+  wifi_gpio0 <= not spi_irq; -- wifi_gpio0 IRQ active low
+
 -- disabled, something doesn't work
 spi_slave_ram_btn: entity work.spi_ram_btn
 generic map
@@ -578,7 +586,7 @@ port map
   csn => spi_csn,
   sclk => spi_sck,
   mosi => spi_mosi,
-  miso => wifi_gpio16,
+  miso => spi_miso,
   btn => R_btn_joy,
   irq => spi_irq,
   wr => spi_ram_wr,
@@ -939,12 +947,12 @@ port map (
   spi_osd_inst: entity work.spi_osd
   generic map
   (
-    c_start_x =>  6, c_start_y =>  6, -- xy centered
-    c_char_bits_x => 6, c_chars_y => 16, -- xy size, slightly less than full screen
-    c_bits_x  => 11, c_bits_y  =>  9, -- xy counters bits
-    c_inverse      => 1, -- 1:support inverse video 0:no inverse video
-    c_transparency => 1, -- 1:semi-tranparent 0:opaque
-    c_init_on      => 1, -- 1:OSD initially shown without any SPI init
+    c_start_x      =>  6, c_start_y =>  6, -- xy centered
+    c_char_bits_x  =>  6, c_chars_y => 18, -- xy size, slightly less than full screen
+    c_bits_x       => 11, c_bits_y  =>  9, -- xy counters bits
+    c_inverse      =>  1, -- 1:support inverse video 0:no inverse video
+    c_transparency =>  1, -- 1:semi-tranparent 0:opaque
+    c_init_on      =>  1, -- 1:OSD initially shown without any SPI init
     c_char_file    => "osd.mem", -- initial OSD content
     c_font_file    => "font_bizcat8x16.mem"
   )
@@ -972,16 +980,6 @@ port map (
   --            r_spi_miso <= gp(11); -- wifi_gpio26
   --	end if;
   --end process;
-
-  -- ESP32 -> FPGA
-  spi_csn <= not wifi_gpio5;
-  spi_sck <= gn(11); -- wifi_gpio25
-  spi_mosi <= gp(11); -- wifi_gpio26
-  -- FPGA -> ESP32
-  --wifi_gpio16 <= spi_miso;
-  wifi_gpio0 <= not spi_irq; -- wifi_gpio0 IRQ active low
-  --wifi_gpio0 <= R_btn_joy(0);
-
 
   vga2dvid_instance: entity work.vga2dvid
   generic map
