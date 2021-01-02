@@ -967,19 +967,6 @@ port map (
     o_r => osd_vga_r, o_g => osd_vga_g, o_b => osd_vga_b,
     o_hsync => osd_vga_hsync, o_vsync => osd_vga_vsync, o_blank => osd_vga_blank
   );
-  --process(clk_pixel)
-  --begin
-  --	if rising_edge(clk_pixel)
-  --	then
-  --		r_spi_csn  <= not wifi_gpio5;
-  --		-- r_spi_mosi <= sd_d(1), -- wifi_gpio4
-  --		r_spi_mosi <= gn(11); -- wifi_gpio25
-  --		r_spi_sclk <= wifi_gpio16;
-  --            r_spi_csn <= not wifi_gpio5;
-  --            r_spi_sck <= gn(11); -- wifi_gpio25
-  --            r_spi_miso <= gp(11); -- wifi_gpio26
-  --	end if;
-  --end process;
 
   vga2dvid_instance: entity work.vga2dvid
   generic map
