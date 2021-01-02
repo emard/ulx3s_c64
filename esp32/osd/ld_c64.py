@@ -7,7 +7,7 @@
 from struct import pack,unpack
 from time import sleep_ms
 
-class ld_vic20:
+class ld_c64:
   def __init__(self,spi,cs):
     self.spi=spi
     self.cs=cs
@@ -278,21 +278,21 @@ class ld_vic20:
     addr=unpack("<H",header)[0]
     self.cpu_halt()
     # normal ROM detects expanded RAM
-    self.poke(0xFDAC,bytearray([0x04]))
-    self.poke(0xFDC7,bytearray([0x21]))
+    #self.poke(0xFDAC,bytearray([0x04]))
+    #self.poke(0xFDC7,bytearray([0x21]))
     # from LOAD start address determine unexpanded or expanded
-    if addr==0x1001:
-      # patched ROM detects expanded RAM as unexpanded
-      self.poke(0xFDAC,bytearray([0x10]))
-      self.poke(0xFDC7,bytearray([0xFF]))
-    if addr==0x401:
-      # patched ROM detects expanded RAM as 3k expanded
-      self.poke(0xFDAC,bytearray([0x04]))
-      self.poke(0xFDC7,bytearray([0xFF]))
+    #if addr==0x1001:
+    #  # patched ROM detects expanded RAM as unexpanded
+    #  #self.poke(0xFDAC,bytearray([0x10]))
+    #  #self.poke(0xFDC7,bytearray([0xFF]))
+    #if addr==0x401:
+    #  # patched ROM detects expanded RAM as 3k expanded
+    #  #self.poke(0xFDAC,bytearray([0x04]))
+    #  #self.poke(0xFDC7,bytearray([0xFF]))
     ROM = (addr==0x8000 or addr==0xA000 or addr>=0xC000)
     CART = (addr==0x2000 or addr==0x4000 or addr==0x6000)
-    # for cold boot, delete magic value from 0xA004
-    self.poke(0xA004,bytearray(5))
+    # for cold boot, delete magic value from 0x8004
+    self.poke(0x8004,bytearray(5))
     if not ROM:
       self.cpu_reset_halt()
       self.cpu_halt()
@@ -333,6 +333,7 @@ class ld_vic20:
       self.cpu_halt()
     self.cpu_continue()
     return bytes
+
 
   def loadprg(self,filename):
     return self.loadprg_stream(open(filename,"rb"))

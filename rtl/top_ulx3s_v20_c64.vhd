@@ -213,7 +213,6 @@ signal	max_ram     : std_logic := '1';
 signal	irq_n       : std_logic := '1';
 signal	nmi_n       : std_logic := '1';
 signal	nmi_ack     : std_logic := '1';
-signal	dma_n       : std_logic := '1';
 signal	ba          : std_logic := '1';
 signal	romL	    : std_logic := '1'; -- cart signals LCA
 signal	romH	    : std_logic := '1'; -- cart signals LCA
@@ -381,7 +380,7 @@ begin
 			enableCia_n <= '1';
 		elsif sysCycle = to_unsigned(sysCycleDef'pos(CYCLE_CPUE), sysCycle'length) then -- CYCLE_CPUE
 			enableVic <= '1';
-			enableCpu <= '1';
+			enableCpu <= not R_cpu_control(1); -- halt
 		elsif sysCycle = to_unsigned(sysCycleDef'pos(CYCLE_CPUF), sysCycle'length) then -- CYCLE_CPUF
 			enableCia_p <= '1';
 		end if;
@@ -415,7 +414,7 @@ begin
 				reset_cnt <= reset_cnt + 1;
 			end if;
 		end if;
-		if btn(0) = '0' or dma_n = '0' then -- temp reset fix
+		if btn(0) = '0' or R_cpu_control(0) = '1' then
 			reset_cnt <= 0;
 		end if;
 	end if;
@@ -587,7 +586,6 @@ spi_mosi <= gp(11); -- wifi_gpio26
 wifi_gpio16 <= spi_miso;
 wifi_gpio0 <= not spi_irq; -- wifi_gpio0 IRQ active low
 
--- disabled, something doesn't work
 spi_slave_ram_btn: entity work.spi_ram_btn
 generic map
 (
@@ -609,6 +607,15 @@ port map
   data_in => std_logic_vector(ramDataIn),
   data_out => spi_ram_wr_data
 );
+
+process(clk32)
+begin
+  if rising_edge(clk32) then
+    if spi_ram_addr(31 downto 24) = x"FF" and spi_ram_wr = '1' then
+      R_cpu_control <= spi_ram_wr_data;
+    end if;
+  end if;
+end process;
 
 -- -----------------------------------------------------------------------
 -- Color RAM
