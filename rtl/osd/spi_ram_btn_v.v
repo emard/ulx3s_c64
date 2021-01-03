@@ -109,3 +109,4 @@ module spi_ram_btn_v
   );
 
 endmodule
+`default_nettype wire

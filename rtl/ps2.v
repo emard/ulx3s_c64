@@ -87,3 +87,4 @@ module ps2 (
         end
     end
 endmodule
+`default_nettype wire
