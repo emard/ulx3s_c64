@@ -13,8 +13,7 @@ use IEEE.numeric_std.ALL;
 entity top_ulx3s_v20_c64 is
   generic
   (
-    sid_ver: std_logic := '0'; -- 0:6581, 1:8580
-    victest: boolean := false -- true: fast compile VIC color test, false: normal C64 with CPU
+    sid_ver: std_logic := '0' -- 0:6581, 1:8580
   );
   port
   (
@@ -494,32 +493,6 @@ begin
 	end if;
 end process;
 
--- dummy bus traffic generator for VIC to generate picture
-dummy: if victest generate
-process(clk32)
-begin
-	if rising_edge(clk32) then
-		if sysCycle = to_unsigned(31,sysCycle'length) then
-                  -- video addr/data bus traffic gnerator
-                  -- use vertical sync to make stable picture
-		  if vicVSync then
-		    vicydummy <= (others => '0');
-		  else
-		    vicydummy <= vicydummy + 1;
-		  end if;
-                  vicDiAec <= vicydummy(15 downto 8);
-                  colorDataAec <= vicydummy(13 downto 10);
-		  -- write VIC registers to display something
-		  cpuAddr <= vicydummy;
-		  cpuDo <= vicydummy(7 downto 0);
-                  cs_vic <= '1';
-                  cpuWe <= '1';
-		end if;
-	end if;
-end process;
-end generate;
-
-c64: if not victest generate
 -- -----------------------------------------------------------------------
 -- 6510 CPU
 -- -----------------------------------------------------------------------
@@ -708,7 +681,6 @@ port map (
 	c64rom_data => c64rom_data,
 	c64rom_wr => c64rom_wr
 );
-end generate;
 
 process(clk32)
 begin
