@@ -33,6 +33,13 @@ VERILOG_FILES = \
 ../rtl/osd/spi_osd_v.v \
 ../rtl/osd/osd.v \
 ../rtl/osd/spirw_slave_v.v \
+../rtl/sid8580/sid8580.v \
+../rtl/sid8580/sid_filters.v \
+../rtl/sid8580/sid_envelope.v \
+../rtl/sid8580/sid_voice.v \
+../rtl/sid8580/sid_tables.v \
+
+# FIXME: compile sid_tables.v will stop at > 2000 iterations
 
 VHDL_FILES = \
 $(TOP_MODULE_FILE) \
@@ -68,6 +75,7 @@ $(TOP_MODULE_FILE) \
 ../rtl/sid6581/sid_mixer.vhd \
 ../rtl/sid6581/adsr_multi.vhd \
 ../rtl/sid6581/sid_debug_pkg.vhd \
+../rtl/sid8580/sid8580_vhd.vhd \
 
 SCRIPTS = ../scripts
 include $(SCRIPTS)/trellis_path.mk

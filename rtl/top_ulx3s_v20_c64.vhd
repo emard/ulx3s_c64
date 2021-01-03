@@ -206,8 +206,8 @@ signal pot_x1       : std_logic_vector(7 downto 0);
 signal pot_y1       : std_logic_vector(7 downto 0);
 signal pot_x2       : std_logic_vector(7 downto 0);
 signal pot_y2       : std_logic_vector(7 downto 0);
-signal sid_potx     : std_logic_vector(7 downto 0);
-signal sid_poty     : std_logic_vector(7 downto 0);
+signal sid_pot_x    : std_logic_vector(7 downto 0);
+signal sid_pot_y    : std_logic_vector(7 downto 0);
 signal audio_8580   : std_logic_vector(17 downto 0);
 signal clk_1MHz     : std_logic_vector(31 downto 0);
 
@@ -990,8 +990,8 @@ pot_x1 <= (others => '1' ) when cia1_pao(6) = '0' else not pot1;
 pot_y1 <= (others => '1' ) when cia1_pao(6) = '0' else not pot2;
 pot_x2 <= (others => '1' ) when cia1_pao(7) = '0' else not pot3;
 pot_y2 <= (others => '1' ) when cia1_pao(7) = '0' else not pot4;
-sid_potx <= pot_x1 and pot_x2;
-sid_poty <= pot_y1 and pot_y2;
+sid_pot_x <= pot_x1 and pot_x2;
+sid_pot_y <= pot_y1 and pot_y2;
 
 sound_6581: if sid_ver = '0' generate
 sid_6581: entity work.sid_top
@@ -1004,8 +1004,8 @@ port map (
 	wdata => std_logic_vector(cpuDo),
 	rdata => sid_do6581,
 
-	potx => sid_potx,
-	poty => sid_poty,
+	potx => sid_pot_x,
+	poty => sid_pot_y,
 
 	comb_wave_l => '0',
 	comb_wave_r => '0',
@@ -1018,18 +1018,19 @@ port map (
 );
 end generate;
 
+-- compile will never finish, therefore commented
 --sound_8580: if sid_ver = '1' generate
---sid_8580 : sid8580
+--sid_8580 : entity work.sid8580_vhd
 --port map (
 --	reset => reset,
 --	clk => clk32,
 --	ce_1m => clk_1MHz(31),
---	we => sid_we and sid_sel_int,
+--	we => sid_wren,
 --	addr => std_logic_vector(cpuAddr(4 downto 0)),
 --	data_in => std_logic_vector(cpuDo),
 --	data_out => sid_do8580,
---	pot_x => pot_x1 and pot_x2,
---	pot_y => pot_y1 and pot_y2,
+--	pot_x => sid_pot_x,
+--	pot_y => sid_pot_y,
 --	audio_data => audio_8580,
 --	extfilter_en => extfilter_en
 --);
