@@ -34,7 +34,7 @@ class osd:
     self.spi_enable_osd = bytearray([0,0xFE,0,0,0,1])
     self.spi_write_osd = bytearray([0,0xFD,0,0,0])
     self.spi_channel = const(2)
-    self.spi_freq = const(1000000)
+    self.spi_freq = const(6000000)
     self.init_pinout_sd()
     #self.spi=SPI(self.spi_channel, baudrate=self.spi_freq, polarity=0, phase=0, bits=8, firstbit=SPI.MSB, sck=Pin(self.gpio_sck), mosi=Pin(self.gpio_mosi), miso=Pin(self.gpio_miso))
     self.init_spi()
