@@ -431,8 +431,8 @@ port map (
 	ps2_key  => ps2_key
 );
 
--- joyA <= btn(6 downto 1) & not btn(0);
--- joyB <= btn(6 downto 1) & not btn(0);
+joyA <= '0' & btn(2) & btn(1) & btn(6) & btn(5) & btn(4) & btn(3) when R_cpu_control(2)='0' else (others => '0');
+joyB <= '0' & btn(2) & btn(1) & btn(6) & btn(5) & btn(4) & btn(3) when R_cpu_control(2)='1' else (others => '0');
 
 Keyboard: entity work.fpga64_keyboard
 port map (
