@@ -200,13 +200,17 @@ signal sid_do6581   : std_logic_vector(7 downto 0);
 signal sid_do8580   : std_logic_vector(7 downto 0);
 signal sid_we       : std_logic;
 signal sid_sel_int  : std_logic;
+signal sid_wren     : std_logic;
 signal audio_6581   : signed(17 downto 0);
 signal pot_x1       : std_logic_vector(7 downto 0);
 signal pot_y1       : std_logic_vector(7 downto 0);
 signal pot_x2       : std_logic_vector(7 downto 0);
 signal pot_y2       : std_logic_vector(7 downto 0);
+signal sid_potx     : std_logic_vector(7 downto 0);
+signal sid_poty     : std_logic_vector(7 downto 0);
 signal audio_8580   : std_logic_vector(17 downto 0);
 signal clk_1MHz     : std_logic_vector(31 downto 0);
+
 
 -- "external" connections, in this project internal
 -- cartridge port
@@ -978,6 +982,7 @@ audio_l     <= audio_data(audio_data'high downto audio_data'high-3);
 audio_r     <= audio_data(audio_data'high downto audio_data'high-3);
 sid_we      <= pulseWrRam and phi0_cpu and cs_sid;
 sid_sel_int <= not sid_mode(1) or (not sid_mode(0) and not cpuAddr(5)) or (sid_mode(0) and not cpuAddr(8));
+sid_wren    <= sid_we and sid_sel_int;
 sid_we_ext  <= sid_we and (not sid_mode(1) or not sid_sel_int);
 sid_do      <= std_logic_vector(io_data) when sid_sel_int = '0' else sid_do6581 when sid_ver='0' else sid_do8580;
 
@@ -985,6 +990,8 @@ pot_x1 <= (others => '1' ) when cia1_pao(6) = '0' else not pot1;
 pot_y1 <= (others => '1' ) when cia1_pao(6) = '0' else not pot2;
 pot_x2 <= (others => '1' ) when cia1_pao(7) = '0' else not pot3;
 pot_y2 <= (others => '1' ) when cia1_pao(7) = '0' else not pot4;
+sid_potx <= pot_x1 and pot_x2;
+sid_poty <= pot_y1 and pot_y2;
 
 sound_6581: if sid_ver = '0' generate
 sid_6581: entity work.sid_top
@@ -993,12 +1000,12 @@ port map (
 	reset => reset,
 
 	addr => "000" & cpuAddr(4 downto 0),
-	wren => sid_we and sid_sel_int,
+	wren => sid_wren,
 	wdata => std_logic_vector(cpuDo),
 	rdata => sid_do6581,
 
-	potx => pot_x1 and pot_x2,
-	poty => pot_y1 and pot_y2,
+	potx => sid_potx,
+	poty => sid_poty,
 
 	comb_wave_l => '0',
 	comb_wave_r => '0',

@@ -53,6 +53,18 @@ $(TOP_MODULE_FILE) \
 ../rtl/dvi/vga.vhd \
 ../rtl/dvi/vga2dvid.vhd \
 ../rtl/dvi/tmds_encoder.vhd \
+../rtl/sid6581/my_math_pkg.vhd \
+../rtl/sid6581/mult_acc.vhd \
+../rtl/sid6581/oscillator.vhd \
+../rtl/sid6581/sid_filter.vhd \
+../rtl/sid6581/Q_table.vhd \
+../rtl/sid6581/sid_regs.vhd \
+../rtl/sid6581/sid_top.vhd \
+../rtl/sid6581/wave_map.vhd \
+../rtl/sid6581/sid_ctrl.vhd \
+../rtl/sid6581/sid_mixer.vhd \
+../rtl/sid6581/adsr_multi.vhd \
+../rtl/sid6581/sid_debug_pkg.vhd \
 
 # synthesis options
 #YOSYS_OPTIONS = -abc9
