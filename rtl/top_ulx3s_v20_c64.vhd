@@ -13,6 +13,7 @@ use IEEE.numeric_std.ALL;
 entity top_ulx3s_v20_c64 is
   generic
   (
+    sid_ver: std_logic := '0'; -- 0:6581, 1:8580
     victest: boolean := false -- true: fast compile VIC color test, false: normal C64 with CPU
   );
   port
@@ -41,6 +42,9 @@ entity top_ulx3s_v20_c64 is
     wifi_gpio5  : in std_logic;
     wifi_gpio16 : inout std_logic;
     --wifi_gpio17 : inout std_logic;
+    
+    -- Audio
+    audio_l, audio_r, audio_v: out std_logic_vector(3 downto 0);
 
     -- Digital Video (differential outputs)
     gpdi_dp: out std_logic_vector(3 downto 0)
@@ -202,6 +206,7 @@ signal pot_y1       : std_logic_vector(7 downto 0);
 signal pot_x2       : std_logic_vector(7 downto 0);
 signal pot_y2       : std_logic_vector(7 downto 0);
 signal audio_8580   : std_logic_vector(17 downto 0);
+signal clk_1MHz     : std_logic_vector(31 downto 0);
 
 -- "external" connections, in this project internal
 -- cartridge port
@@ -239,7 +244,6 @@ signal	pot4        : std_logic_vector(7 downto 0);
 -- Connector to the SID
 signal	audio_data  : std_logic_vector(17 downto 0);
 signal	extfilter_en: std_logic;
-signal	sid_ver     : std_logic;
 signal	sid_we_ext  : std_logic;
 signal	sid_mode    : std_logic_vector(1 downto 0);
 
@@ -953,6 +957,76 @@ port map (
 	g => vic_g,
 	b => vic_b
 );
+
+-- -----------------------------------------------------------------------
+-- SID
+-- -----------------------------------------------------------------------
+div1m: process(clk32) -- this process devides 32 MHz to 1MHz (for the SID)
+begin
+	if (rising_edge(clk32)) then
+		if (reset = '1') then
+			clk_1MHz <= "00000000000000000000000000000001";
+		else
+			clk_1MHz(31 downto 1) <= clk_1MHz(30 downto 0);
+			clk_1MHz(0)           <= clk_1MHz(31);
+		end if;
+	end if;
+end process;
+
+audio_data  <= std_logic_vector(audio_6581) when sid_ver='0' else audio_8580;
+audio_l     <= audio_data(audio_data'high downto audio_data'high-3);
+audio_r     <= audio_data(audio_data'high downto audio_data'high-3);
+sid_we      <= pulseWrRam and phi0_cpu and cs_sid;
+sid_sel_int <= not sid_mode(1) or (not sid_mode(0) and not cpuAddr(5)) or (sid_mode(0) and not cpuAddr(8));
+sid_we_ext  <= sid_we and (not sid_mode(1) or not sid_sel_int);
+sid_do      <= std_logic_vector(io_data) when sid_sel_int = '0' else sid_do6581 when sid_ver='0' else sid_do8580;
+
+pot_x1 <= (others => '1' ) when cia1_pao(6) = '0' else not pot1;
+pot_y1 <= (others => '1' ) when cia1_pao(6) = '0' else not pot2;
+pot_x2 <= (others => '1' ) when cia1_pao(7) = '0' else not pot3;
+pot_y2 <= (others => '1' ) when cia1_pao(7) = '0' else not pot4;
+
+sound_6581: if sid_ver = '0' generate
+sid_6581: entity work.sid_top
+port map (
+	clock => clk32,
+	reset => reset,
+
+	addr => "000" & cpuAddr(4 downto 0),
+	wren => sid_we and sid_sel_int,
+	wdata => std_logic_vector(cpuDo),
+	rdata => sid_do6581,
+
+	potx => pot_x1 and pot_x2,
+	poty => pot_y1 and pot_y2,
+
+	comb_wave_l => '0',
+	comb_wave_r => '0',
+
+	extfilter_en => extfilter_en,
+
+	start_iter => clk_1MHz(31),
+	sample_left => audio_6581,
+	sample_right => open
+);
+end generate;
+
+--sound_8580: if sid_ver = '1' generate
+--sid_8580 : sid8580
+--port map (
+--	reset => reset,
+--	clk => clk32,
+--	ce_1m => clk_1MHz(31),
+--	we => sid_we and sid_sel_int,
+--	addr => std_logic_vector(cpuAddr(4 downto 0)),
+--	data_in => std_logic_vector(cpuDo),
+--	data_out => sid_do8580,
+--	pot_x => pot_x1 and pot_x2,
+--	pot_y => pot_y1 and pot_y2,
+--	audio_data => audio_8580,
+--	extfilter_en => extfilter_en
+--);
+--end generate;
 
 ---------------------------------------------------------
 
