@@ -89,16 +89,16 @@ architecture gideon of sid_regs is
 
     type byte_array_t is array(natural range <>) of std_logic_vector(7 downto 0);
     type nibble_array_t is array(natural range <>) of std_logic_vector(3 downto 0);
-    signal freq_lo  : byte_array_t(0 to 15)  := (others => (others => '0'));
-    signal freq_hi  : byte_array_t(0 to 15)  := (others => (others => '0'));
-    signal phase_lo : byte_array_t(0 to 15)  := (others => (others => '0'));
-    signal phase_hi : nibble_array_t(0 to 15):= (others => (others => '0'));
-    signal control  : byte_array_t(0 to 15)  := (others => (others => '0'));
-    signal att_dec  : byte_array_t(0 to 15)  := (others => (others => '0'));
-    signal sust_rel : byte_array_t(0 to 15)  := (others => (others => '0'));
+    signal freq_lo  : byte_array_t(0 to 15); --  := (others => (others => '0'));
+    signal freq_hi  : byte_array_t(0 to 15); --  := (others => (others => '0'));
+    signal phase_lo : byte_array_t(0 to 15); --  := (others => (others => '0'));
+    signal phase_hi : nibble_array_t(0 to 15); --:= (others => (others => '0'));
+    signal control  : byte_array_t(0 to 15); --  := (others => (others => '0'));
+    signal att_dec  : byte_array_t(0 to 15); --  := (others => (others => '0'));
+    signal sust_rel : byte_array_t(0 to 15); --  := (others => (others => '0'));
     signal do_write : std_logic;
     signal wdata_d  : std_logic_vector(7 downto 0);
-    signal filt_en_i: std_logic_vector(15 downto 0) := (others => '0');
+    signal filt_en_i: std_logic_vector(15 downto 0); -- := (others => '0');
     
     constant address_remap : byte_array_t(0 to 255) := (
         X"00", X"01", X"02", X"03", X"04", X"05", X"06",  -- 00 Voice 1
