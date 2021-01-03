@@ -277,20 +277,8 @@ class ld_c64:
     f.readinto(header)
     addr=unpack("<H",header)[0]
     self.cpu_halt()
-    # normal ROM detects expanded RAM
-    #self.poke(0xFDAC,bytearray([0x04]))
-    #self.poke(0xFDC7,bytearray([0x21]))
-    # from LOAD start address determine unexpanded or expanded
-    #if addr==0x1001:
-    #  # patched ROM detects expanded RAM as unexpanded
-    #  #self.poke(0xFDAC,bytearray([0x10]))
-    #  #self.poke(0xFDC7,bytearray([0xFF]))
-    #if addr==0x401:
-    #  # patched ROM detects expanded RAM as 3k expanded
-    #  #self.poke(0xFDAC,bytearray([0x04]))
-    #  #self.poke(0xFDC7,bytearray([0xFF]))
-    ROM = (addr==0x8000 or addr==0xA000 or addr>=0xC000)
-    CART = (addr==0x2000 or addr==0x4000 or addr==0x6000)
+    ROM = (addr==0x8000 or addr==0xA000 or addr==0xE000)
+    CART = False
     # for cold boot, delete magic value from 0x8004
     self.poke(0x8004,bytearray(5))
     if not ROM:
@@ -313,7 +301,7 @@ class ld_c64:
     # LOAD PRG to RAM
     bytes=self.load_stream(f,addr,maxlen=0x10000,blocksize=1)
     # if RAM area loaded, patch RAM as if LOAD command executed
-    if addr+bytes<=0x9000 and (not CART):
+    if not CART:
       #print("set pointers after LOAD %04X-%04X" % (addr,addr+bytes))
       self.poke(0x7A,pack("<H",addr-1))
       self.poke(0x2B,pack("<H",addr))
