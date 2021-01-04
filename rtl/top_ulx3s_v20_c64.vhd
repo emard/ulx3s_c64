@@ -76,7 +76,7 @@ signal spi_ram_addr: std_logic_vector(31 downto 0); -- MSB for ROMs
 signal R_cpu_control: std_logic_vector(7 downto 0);
 signal R_btn_joy: std_logic_vector(btn'range);
 
-signal bram_spi_cs, bram_spi_we, bram_mux_we: std_logic;
+signal bram_spi_cs, bram_spi_we, bram_spi_rd, bram_mux_we: std_logic;
 signal bram_mux_addr: unsigned(15 downto 0);
 signal bram_mux_wr_data: unsigned(7 downto 0);
 
@@ -527,8 +527,9 @@ nmiLoc <= irq_cia2 and nmi_n;
 
 bram_spi_cs <= '1' when spi_ram_addr(31 downto 24) = x"00" else '0';
 bram_spi_we <= bram_spi_cs and spi_ram_wr;
+bram_spi_rd <= bram_spi_cs and spi_ram_rd;
 bram_mux_we <= '1' when bram_spi_we = '1' else ramWeCE;
-bram_mux_addr <= unsigned(spi_ram_addr(15 downto 0)) when bram_spi_we = '1' else ramAddr;
+bram_mux_addr <= unsigned(spi_ram_addr(15 downto 0)) when (bram_spi_we or bram_spi_rd)='1' else ramAddr;
 bram_mux_wr_data <= unsigned(spi_ram_wr_data) when bram_spi_we = '1' else ramDataOut;
 
 -- 64K RAM (BRAM)
@@ -542,9 +543,6 @@ generic map
 port map
 (
 	clk_a      => clk32,
-	--addr_a     => ramAddr,
-	--we_a       => ramWeCE,
-	--data_in_a  => ramDataOut,
 	addr_a     => bram_mux_addr,
 	we_a       => bram_mux_we,
 	data_in_a  => bram_mux_wr_data,
