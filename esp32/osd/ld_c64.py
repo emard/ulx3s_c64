@@ -49,16 +49,20 @@ class ld_c64:
   # read from file -> write to SPI RAM
   def load_stream(self, filedata, addr=0, maxlen=0x10000, blocksize=1024):
     block = bytearray(blocksize)
+    mvblock = memoryview(block)
     # Request load
     self.cs.on()
     self.spi.write(bytearray([0,(addr >> 24) & 0xFF, (addr >> 16) & 0xFF, (addr >> 8) & 0xFF, addr & 0xFF]))
     bytes_loaded = 0
     while bytes_loaded < maxlen:
-      if filedata.readinto(block):
-        self.spi.write(block)
-        bytes_loaded += blocksize
-      else:
+      blen = filedata.readinto(block)
+      if blen<blocksize:
+        if blen>0:
+          self.spi.write(mvblock[0:blen])
         break
+      else:
+        self.spi.write(block)
+      bytes_loaded += blen
     self.cs.off()
     return bytes_loaded
 
@@ -80,7 +84,7 @@ class ld_c64:
       sleep_ms(3000)
       self.cpu_halt()
     # LOAD PRG to RAM
-    bytes=self.load_stream(f,addr,maxlen=0x10000,blocksize=1)
+    bytes=self.load_stream(f,addr)
     # if RAM area loaded, patch RAM as if LOAD command executed
     if not CART:
       #print("set pointers after LOAD %04X-%04X" % (addr,addr+bytes))
