@@ -5,12 +5,10 @@
 --     A fully functional commodore 64 implementation in a single FPGA
 --
 -- -----------------------------------------------------------------------
--- Copyright 2005-2008 by Peter Wendrich (pwsoft@syntiac.com)
--- http://www.syntiac.com/fpga64.html
--- -----------------------------------------------------------------------
 --
 -- C64 palette index to 24 bit RGB color
--- 
+-- AUTHOR=EMARD
+--
 -- -----------------------------------------------------------------------
 
 library IEEE;
