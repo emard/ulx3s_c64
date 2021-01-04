@@ -13,6 +13,7 @@ use IEEE.numeric_std.ALL;
 entity top_ulx3s_v20_c64 is
   generic
   (
+    clk32_freq: integer := 32500000; -- Hz PLL output frequency
     sid_ver: std_logic := '0' -- 0:6581, 1:8580
   );
   port
@@ -250,6 +251,8 @@ signal	audio_data  : std_logic_vector(17 downto 0);
 signal	extfilter_en: std_logic;
 signal	sid_we_ext  : std_logic;
 signal	sid_mode    : std_logic_vector(1 downto 0);
+signal  spdif_in    : std_logic_vector(23 downto 0);
+signal  spdif_out   : std_logic;
 
 -- IEC
 signal	iec_data_o  : std_logic;
@@ -330,8 +333,8 @@ begin
   generic map
   (
       in_Hz => natural(25.0e6),
-    out0_Hz => natural(32.5e6)*5,
-    out1_Hz => natural(32.5e6)
+    out0_Hz => clk32_freq*5,
+    out1_Hz => clk32_freq
   )
   port map
   (
@@ -950,9 +953,6 @@ begin
 	end if;
 end process;
 
-audio_data  <= std_logic_vector(audio_6581) when sid_ver='0' else audio_8580;
-audio_l     <= audio_data(audio_data'high downto audio_data'high-3);
-audio_r     <= audio_data(audio_data'high downto audio_data'high-3);
 sid_we      <= pulseWrRam and phi0_cpu and cs_sid;
 sid_sel_int <= not sid_mode(1) or (not sid_mode(0) and not cpuAddr(5)) or (sid_mode(0) and not cpuAddr(8));
 sid_wren    <= sid_we and sid_sel_int;
@@ -1008,6 +1008,23 @@ end generate;
 --	extfilter_en => extfilter_en
 --);
 --end generate;
+
+audio_data  <= std_logic_vector(audio_6581) when sid_ver='0' else audio_8580;
+audio_l     <= audio_data(audio_data'high downto audio_data'high-3);
+audio_r     <= audio_data(audio_data'high downto audio_data'high-3);
+spdif_in    <= "000" & audio_data & "000";
+
+spdif_tx_inst: entity work.spdif_tx
+generic map (
+	c_clk_freq => clk32_freq,
+	c_sample_freq => 48000
+)
+port map (
+	clk => clk32,
+	data_in => spdif_in,
+	spdif_out => spdif_out
+);
+audio_v <= "00" & spdif_out & "0";
 
 ---------------------------------------------------------
 

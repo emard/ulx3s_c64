@@ -76,6 +76,7 @@ $(TOP_MODULE_FILE) \
 ../rtl/sid6581/adsr_multi.vhd \
 ../rtl/sid6581/sid_debug_pkg.vhd \
 ../rtl/sid8580/sid8580_vhd.vhd \
+../rtl/spdif_tx.vhd \
 
 SCRIPTS = ../scripts
 include $(SCRIPTS)/trellis_path.mk
