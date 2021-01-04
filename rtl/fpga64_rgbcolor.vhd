@@ -41,7 +41,7 @@ x"00CC55", -- 5 green
 x"2C379D", -- 6 blue
 x"EEEE77", -- 7 yellow
 x"DD8855", -- 8 orange
-x"664400", -- 9 brown
+x"602C00", -- 9 brown
 x"FF7777", -- A light red
 x"333333", -- B dark grey
 x"777777", -- C grey
