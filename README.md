@@ -40,3 +40,14 @@ Onboard buttons act as joystick. To change joystick ports:
 Press all 4 onboard cursor buttons to open OSD window and select a PRG file,
 navigate and press cursor right button at PRG file, it will be uploaded
 and started.
+
+For debugging RAM content, ESP32:
+
+    osd.poke(9999,"ABCD")
+    osd.peek(9999,4)
+    ABCD
+
+On C64 (65 = ASCII "A"):
+
+    ?PEEK(9999)
+    65
