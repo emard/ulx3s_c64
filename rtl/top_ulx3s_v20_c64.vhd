@@ -208,7 +208,8 @@ signal pot_y2       : std_logic_vector(7 downto 0);
 signal sid_pot_x    : std_logic_vector(7 downto 0);
 signal sid_pot_y    : std_logic_vector(7 downto 0);
 signal audio_8580   : std_logic_vector(17 downto 0);
-signal clk_1MHz     : std_logic_vector(31 downto 0);
+signal clk_1MHz_en  : std_logic; -- single clk pulse
+signal clk_1MHz_sqr : std_logic; -- square wave
 
 
 -- "external" connections, in this project internal
@@ -935,14 +936,16 @@ port map (
 -- -----------------------------------------------------------------------
 -- SID
 -- -----------------------------------------------------------------------
-div1m: process(clk32) -- this process devides 32 MHz to 1MHz (for the SID)
+div1m: process(clk32) -- this process divides 32 MHz to 1 MHz for the SID
 begin
 	if (rising_edge(clk32)) then
-		if (reset = '1') then
-			clk_1MHz <= "00000000000000000000000000000001";
+		if sysCycle = to_unsigned(sysCycleDef'pos(CYCLE_VIC0), sysCycle'length) then
+			if clk_1MHz_sqr = '1' then
+				clk_1MHz_en <= '1'; -- single pulse
+			end if;
+			clk_1MHz_sqr <= not clk_1MHz_sqr;
 		else
-			clk_1MHz(31 downto 1) <= clk_1MHz(30 downto 0);
-			clk_1MHz(0)           <= clk_1MHz(31);
+			clk_1MHz_en <= '0';
 		end if;
 	end if;
 end process;
@@ -982,7 +985,7 @@ port map (
 
 	extfilter_en => extfilter_en,
 
-	start_iter => clk_1MHz(31),
+	start_iter => clk_1MHz_en,
 	sample_left => audio_6581,
 	sample_right => open
 );
@@ -994,7 +997,7 @@ end generate;
 --port map (
 --	reset => reset,
 --	clk => clk32,
---	ce_1m => clk_1MHz(31),
+--	ce_1m => clk_1MHz_en,
 --	we => sid_wren,
 --	addr => std_logic_vector(cpuAddr(4 downto 0)),
 --	data_in => std_logic_vector(cpuDo),
