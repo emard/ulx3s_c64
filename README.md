@@ -21,6 +21,16 @@ Sound (SID6581) works. New SID8580 won't compile.
 
 PS/2 Keyboard works.
 
+# Compiling
+
+From linux
+
+    make clean
+    # to program FPGA, will not persist after power off
+    make prog
+    # to program flash, will persist after power off
+    make flash
+
 # ESP32 OSD loader
 
 Download some PRG files and upload them to ESP32 flash or SD

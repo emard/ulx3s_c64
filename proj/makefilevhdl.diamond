@@ -82,3 +82,8 @@ SCRIPTS = ../scripts
 include $(SCRIPTS)/trellis_path.mk
 include $(SCRIPTS)/diamond_path.mk
 include $(SCRIPTS)/diamond_main.mk
+
+# force build tables each time
+$(BOARD)_$(FPGA_SIZE)f_$(PROJECT).ldf: build_wave_mem
+build_wave_mem:
+	make -C ../rtl/sid8580

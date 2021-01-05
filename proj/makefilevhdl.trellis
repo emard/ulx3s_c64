@@ -80,9 +80,12 @@ $(TOP_MODULE_FILE) \
 NEXTPNR_OPTIONS = --router router2
 #NEXTPNR_OPTIONS = --timing-allow-fail
 
-#../rtl/
-
 SCRIPTS = ../scripts
 include $(SCRIPTS)/diamond_path.mk
 include $(SCRIPTS)/trellis_path.mk
 include $(SCRIPTS)/trellis_main_ghdl.mk
+
+# force build tables each time
+$(PROJECT).json: build_wave_mem
+build_wave_mem:
+	make -C ../rtl/sid8580
