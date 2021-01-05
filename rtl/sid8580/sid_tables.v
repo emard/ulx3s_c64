@@ -12,6 +12,16 @@ module sid_tables
 	output reg [7:0] pst_out
 );
 
+// read generated tables (EMARD)
+reg [7:0] wave__st[4096];
+initial $readmemh("wave__st.mem", wave__st);
+reg [7:0] wave_p_t[2048];
+initial $readmemh("wave_p_t.mem", wave_p_t);
+reg [7:0] wave_ps_[4096];
+initial $readmemh("wave_ps_.mem", wave_ps_);
+reg [7:0] wave_pst[4096];
+initial $readmemh("wave_pst.mem", wave_pst);
+
 always @(posedge clock) begin
 	_st_out <= wave__st[sawtooth];
 	p_t_out <= wave_p_t[triangle[11:1]];
@@ -19,15 +29,14 @@ always @(posedge clock) begin
 	pst_out <= wave_pst[sawtooth];
 end
 
+/*
 //
 // convert combinatorial logic to ROM (Sorgelig)
 //
-
 wire [7:0] wave__st[4096];
 wire [7:0] wave_p_t[2048];
 wire [7:0] wave_ps_[4096];
 wire [7:0] wave_pst[4096];
-
 generate
 	genvar i;
 	for(i = 0; i<4096; i=i+1) begin : b1 assign wave__st[i] =
@@ -250,5 +259,5 @@ generate
 	end
 
 endgenerate
-
+*/
 endmodule

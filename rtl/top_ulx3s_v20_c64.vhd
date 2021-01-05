@@ -14,7 +14,7 @@ entity top_ulx3s_v20_c64 is
   generic
   (
     clk32_freq: integer := 32500000; -- Hz PLL output frequency
-    sid_ver: std_logic := '0' -- 0:6581, 1:8580
+    sid_ver: std_logic := '1' -- 0:6581, 1:8580
   );
   port
   (
@@ -989,30 +989,32 @@ port map (
 	sample_left => audio_6581,
 	sample_right => open
 );
+audio_data  <= std_logic_vector(audio_6581);
+spdif_in    <= "000" & audio_data & "000";
 end generate;
 
 -- compile will never finish, therefore commented
---sound_8580: if sid_ver = '1' generate
---sid_8580 : entity work.sid8580_vhd
---port map (
---	reset => reset,
---	clk => clk32,
---	ce_1m => clk_1MHz_en,
---	we => sid_wren,
---	addr => std_logic_vector(cpuAddr(4 downto 0)),
---	data_in => std_logic_vector(cpuDo),
---	data_out => sid_do8580,
---	pot_x => sid_pot_x,
---	pot_y => sid_pot_y,
---	audio_data => audio_8580,
---	extfilter_en => extfilter_en
---);
---end generate;
+sound_8580: if sid_ver = '1' generate
+sid_8580 : entity work.sid8580_vhd
+port map (
+	reset => reset,
+	clk => clk32,
+	ce_1m => clk_1MHz_en,
+	we => sid_wren,
+	addr => std_logic_vector(cpuAddr(4 downto 0)),
+	data_in => std_logic_vector(cpuDo),
+	data_out => sid_do8580,
+	pot_x => sid_pot_x,
+	pot_y => sid_pot_y,
+	audio_data => audio_8580,
+	extfilter_en => extfilter_en
+);
+audio_data  <= audio_8580;
+spdif_in    <= "0" & audio_data & "00000";
+end generate;
 
-audio_data  <= std_logic_vector(audio_6581) when sid_ver='0' else audio_8580;
 audio_l     <= audio_data(audio_data'high downto audio_data'high-3);
 audio_r     <= audio_data(audio_data'high downto audio_data'high-3);
-spdif_in    <= "000" & audio_data & "000";
 
 spdif_tx_inst: entity work.spdif_tx
 generic map (

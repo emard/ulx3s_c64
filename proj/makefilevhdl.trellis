@@ -34,9 +34,9 @@ VERILOG_FILES = \
 ../rtl/sid8580/sid_filters.v \
 ../rtl/sid8580/sid_envelope.v \
 ../rtl/sid8580/sid_voice.v \
+../rtl/sid8580/sid_tables.v \
 
 # FIXME: compile sid_tables.v will never finish
-#../rtl/sid8580/sid_tables.v \
 
 GHDL_FILES = \
 $(TOP_MODULE_FILE) \
@@ -49,9 +49,9 @@ $(TOP_MODULE_FILE) \
 ../rtl/fpga64_buslogic.vhd \
 ../rtl/bram_true2p_2clk.vhd \
 ../rtl/dprom_kernal.vhd \
-../rtl/roms/rom_kernal_pack_orig.vhd \
+../rtl/roms/rom_kernal_pack.vhd \
 ../rtl/dprom_chargen.vhd \
-../rtl/roms/rom_chargen_pack_orig.vhd \
+../rtl/roms/rom_chargen_pack.vhd \
 ../rtl/fpga64_keyboard.vhd \
 ../rtl/video_vicII_656x.vhd \
 ../rtl/fpga64_rgbcolor.vhd \
@@ -79,6 +79,8 @@ $(TOP_MODULE_FILE) \
 #YOSYS_OPTIONS = -abc9
 NEXTPNR_OPTIONS = --router router2
 #NEXTPNR_OPTIONS = --timing-allow-fail
+
+#../rtl/
 
 SCRIPTS = ../scripts
 include $(SCRIPTS)/diamond_path.mk
