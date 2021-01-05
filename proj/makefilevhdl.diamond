@@ -87,3 +87,5 @@ include $(SCRIPTS)/diamond_main.mk
 $(BOARD)_$(FPGA_SIZE)f_$(PROJECT).ldf: build_wave_mem
 build_wave_mem:
 	make -C ../rtl/sid8580
+	ln -sf ../rtl/sid8580/wave_*.mem .
+
