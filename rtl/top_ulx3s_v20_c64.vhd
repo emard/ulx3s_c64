@@ -14,7 +14,10 @@ entity top_ulx3s_v20_c64 is
   generic
   (
     clk32_freq: integer := 32500000; -- Hz PLL output frequency
-    doublescan: integer := 0; -- 0: builds fast, 1616x300@50Hz, 1: builds slow, 722x576@50Hz
+    -- doublescan
+    -- 0: not doublescan : compiling easy,      video difficult : 1616x300@51Hz
+    -- 1: yes doublescan : compiling difficult, video easy      :  720x576@51Hz
+    doublescan: integer := 0;
     sid_ver: std_logic := '1' -- 0:6581, 1:8580
   );
   port
@@ -70,6 +73,7 @@ signal clocks_c64: std_logic_vector(3 downto 0);
 -- after OSD module 
 signal osd_vga_r, osd_vga_g, osd_vga_b: std_logic_vector(7 downto 0);
 signal osd_vga_hsync, osd_vga_vsync, osd_vga_blank: std_logic;
+signal osd_clk_pixel_ena: std_logic;
 -- invert CS to get CSN
 signal spi_irq, spi_csn, spi_miso, spi_mosi, spi_sck: std_logic;
 signal spi_ram_wr, spi_ram_rd: std_logic;
@@ -143,7 +147,7 @@ signal cs_ioE       : std_logic;
 signal cs_ioF       : std_logic;
 signal cs_romL      : std_logic;
 signal cs_romH      : std_logic;
-signal cs_UMAXromH  : std_logic;							-- romH VIC II read flag
+signal cs_UMAXromH  : std_logic; -- romH VIC II read flag
 signal cpuWe        : std_logic;
 signal cpuAddr      : unsigned(15 downto 0);
 signal cpuDi        : unsigned(7 downto 0);
@@ -188,6 +192,10 @@ signal vicAddr1514  : unsigned(1 downto 0);
 signal colorQ       : unsigned(3 downto 0);
 signal colorData    : unsigned(3 downto 0);
 signal colorDataAec : unsigned(3 downto 0);
+
+type T_2x_scan is array (natural range <>) of integer;
+constant osd_start_x: T_2x_scan := (128, 104);
+constant osd_start_y: T_2x_scan := (  6, 140);
 
 -- VGA/SCART interface
 signal	vic_r       : unsigned(7 downto 0);
@@ -288,7 +296,7 @@ signal	uart_dcd_in : std_logic; -- CIA2, PortB(4)
 signal	uart_cts    : std_logic; -- CIA2, PortB(6)
 signal	uart_dsr    : std_logic; -- CIA2, PortB(7)
 
--- verilog component
+-- verilog components
 component mos6526
 	port (
 		clk           : in  std_logic;
@@ -936,6 +944,7 @@ vicColorIndex <= vicColorIndex1;
 vicHSync      <= vicHSync1;
 vicVSync      <= vicVSync1;
 vicBlank      <= vicBlank1;
+osd_clk_pixel_ena <= sysCycle(0);
 end generate;
 
 yes_doublescan: if doublescan /= 0 generate
@@ -944,7 +953,7 @@ generic map
 (
   xsize       => 360, -- DVI picture size is 2x this value
   ysize       => 288, -- DVI picture size is 2x this value
-  xcenter     =>  92, -- increase -> picture moves left
+  xcenter     =>  89, -- increase -> picture moves left
   ycenter     =>  16, -- increase -> picture moves up
   hsync_width =>  15,
   vsync_width =>  14,
@@ -965,6 +974,7 @@ port map
   O_VSYNC     => vicVSync,
   O_BLANK     => vicBlank
 );
+osd_clk_pixel_ena <= '1';
 end generate;
 
 c64colors: entity work.fpga64_rgbcolor
@@ -1075,7 +1085,8 @@ audio_v <= "00" & spdif_out & "0";
   spi_osd_inst: entity work.spi_osd
   generic map
   (
-    c_start_x      =>128, c_start_y =>  6, -- xy centered
+    c_start_x      => osd_start_x(doublescan), -- x centering increase -> right
+    c_start_y      => osd_start_y(doublescan), -- y centering increase -> down
     c_char_bits_x  =>  6, c_chars_y => 18, -- xy size, slightly less than full screen
     c_bits_x       => 11, c_bits_y  =>  9, -- xy counters bits
     c_inverse      =>  1, -- 1:support inverse video 0:no inverse video
@@ -1086,7 +1097,8 @@ audio_v <= "00" & spdif_out & "0";
   )
   port map
   (
-    clk_pixel => clk_pixel, clk_pixel_ena => sysCycle(0),
+    clk_pixel => clk_pixel,
+    clk_pixel_ena => osd_clk_pixel_ena,
     i_r => std_logic_vector(vic_r(7 downto 0)),
     i_g => std_logic_vector(vic_g(7 downto 0)),
     i_b => std_logic_vector(vic_b(7 downto 0)),
