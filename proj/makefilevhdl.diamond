@@ -57,6 +57,7 @@ $(TOP_MODULE_FILE) \
 ../rtl/roms/rom_chargen_pack.vhd \
 ../rtl/fpga64_keyboard.vhd \
 ../rtl/video_vicII_656x.vhd \
+../rtl/video_2x_scan.vhd \
 ../rtl/fpga64_rgbcolor.vhd \
 ../rtl/osd/spi_ram_btn.vhd \
 ../rtl/osd/spi_osd.vhd \

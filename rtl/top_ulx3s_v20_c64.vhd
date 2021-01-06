@@ -14,6 +14,7 @@ entity top_ulx3s_v20_c64 is
   generic
   (
     clk32_freq: integer := 32500000; -- Hz PLL output frequency
+    doublescan: integer := 0; -- 0: builds fast, 1616x300@50Hz, 1: builds slow, 722x576@50Hz
     sid_ver: std_logic := '1' -- 0:6581, 1:8580
   );
   port
@@ -106,6 +107,7 @@ signal aec          : std_logic;
 signal enableCpu    : std_logic;
 signal enableVic    : std_logic;
 signal enablePixel  : std_logic;
+signal enablePixel2 : std_logic;
 
 signal irq_cia1     : std_logic;
 signal irq_cia2     : std_logic;
@@ -172,10 +174,10 @@ signal toddiv3      : std_logic_vector(1 downto 0);
 
 -- video
 constant ntscMode   : std_logic := '0';
-signal vicColorIndex: unsigned(3 downto 0);
-signal vicHSync     : std_logic;
-signal vicVSync     : std_logic;
-signal vicBlank     : std_logic;
+signal vicColorIndex, vicColorIndex1 : unsigned(3 downto 0);
+signal vicHSync     , vicHSync1      : std_logic;
+signal vicVSync     , vicVSync1      : std_logic;
+signal vicBlank     , vicBlank1      : std_logic;
 signal vicBus       : unsigned(7 downto 0);
 signal vicDi        : unsigned(7 downto 0);
 signal vicDiAec     : unsigned(7 downto 0);
@@ -410,6 +412,7 @@ begin
 		end if;
 	end if;
 end process;
+enablePixel2 <= sysCycle(0);
 
 -- -----------------------------------------------------------------------
 -- Reset button
@@ -919,14 +922,50 @@ port map (
 	addrValid => aec,
 
 	-- VGA
-	hsync => vicHSync,
-	vsync => vicVSync,
-	blank => vicBlank,
-	colorIndex => vicColorIndex,
+	hsync => vicHSync1,
+	vsync => vicVSync1,
+	blank => vicBlank1,
+	colorIndex => vicColorIndex1,
 
 	lp_n => cia1_pbi(4), -- light pen
 	irq_n => irq_vic
 );
+
+no_doublescan: if doublescan = 0 generate
+vicColorIndex <= vicColorIndex1;
+vicHSync      <= vicHSync1;
+vicVSync      <= vicVSync1;
+vicBlank      <= vicBlank1;
+end generate;
+
+yes_doublescan: if doublescan /= 0 generate
+scan_doubler : entity work.video_2x_scan
+generic map
+(
+  xsize       => 360, -- DVI picture size is 2x this value
+  ysize       => 288, -- DVI picture size is 2x this value
+  xcenter     =>  92, -- increase -> picture moves left
+  ycenter     =>  16, -- increase -> picture moves up
+  hsync_width =>  15,
+  vsync_width =>  14,
+  color_bits  =>   4
+)
+port map
+(
+  CLK         => clk32,
+  ENA         => enablePixel,
+  ENA_X2      => enablePixel2,
+
+  I_COLOR     => vicColorIndex1,
+  I_HSYNC     => vicHSync1,
+  I_VSYNC     => vicVSync1,
+
+  O_COLOR     => vicColorIndex,
+  O_HSYNC     => vicHSync,
+  O_VSYNC     => vicVSync,
+  O_BLANK     => vicBlank
+);
+end generate;
 
 c64colors: entity work.fpga64_rgbcolor
 port map (

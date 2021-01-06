@@ -150,6 +150,7 @@ signal aec          : std_logic;
 signal enableCpu    : std_logic;
 signal enableVic    : std_logic;
 signal enablePixel  : std_logic;
+signal enablePixel2 : std_logic;
 
 signal irq_cia1     : std_logic;
 signal irq_cia2     : std_logic;
@@ -202,10 +203,10 @@ signal toddiv       : std_logic_vector(19 downto 0);
 signal toddiv3      : std_logic_vector(1 downto 0);
 
 -- video
-signal vicColorIndex: unsigned(3 downto 0);
-signal vicHSync     : std_logic;
-signal vicVSync     : std_logic;
-signal vicBlank     : std_logic;
+signal vicColorIndex, vicColorIndex2 : unsigned(3 downto 0);
+signal vicHSync, vicHSync2           : std_logic;
+signal vicVSync, vicVSync2           : std_logic;
+signal vicBlank, vicBlank2           : std_logic;
 signal vicBus       : unsigned(7 downto 0);
 signal vicDi        : unsigned(7 downto 0);
 signal vicDiAec     : unsigned(7 downto 0);
@@ -314,7 +315,6 @@ end process;
 process(clk32)
 begin
 	if rising_edge(clk32) then
-		enablePixel <= '0';
 		if sysCycle(1 downto 0) = "10" then
 			enablePixel <= '1';
                 else
@@ -322,6 +322,7 @@ begin
 		end if;
 	end if;
 end process;
+enablePixel2 <= sysCycle(0);
 
 -- -----------------------------------------------------------------------
 -- Reset button
@@ -412,9 +413,36 @@ port map (
 	irq_n => irq_vic
 );
 
+u_scan_doubler : entity work.video_2x_scan
+generic map
+(
+  xsize       => 360, -- DVI picture size is 2x this value
+  ysize       => 288, -- DVI picture size is 2x this value
+  xcenter     =>  92, -- increase -> picture moves left
+  ycenter     =>  16, -- increase -> picture moves up
+  hsync_width =>  15,
+  vsync_width =>  14,
+  color_bits  =>   4
+)
+port map
+(
+  I_COLOR      => vicColorIndex,
+  I_HSYNC      => vicHSync,
+  I_VSYNC      => vicVSync,
+
+  O_COLOR      => vicColorIndex2,
+  O_HSYNC      => vicHSync2,
+  O_VSYNC      => vicVSync2,
+  O_BLANK      => vicBlank2,
+
+  ENA_X2       => enablePixel2,
+  ENA          => enablePixel,
+  CLK          => clk32
+);
+
 c64colors: entity work.fpga64_rgbcolor
 port map (
-	index => vicColorIndex,
+	index => vicColorIndex2,
 	r => vic_r,
 	g => vic_g,
 	b => vic_b
@@ -492,9 +520,9 @@ port map (
     in_red    => std_logic_vector(vic_r),
     in_green  => std_logic_vector(vic_g),
     in_blue   => std_logic_vector(vic_b),
-    in_hsync  => vicHSync,
-    in_vsync  => vicVSync,
-    in_blank  => vicBlank,
+    in_hsync  => vicHSync2,
+    in_vsync  => vicVSync2,
+    in_blank  => vicBlank2,
 
     -- single-ended output ready for differential buffers
     out_red   => dvid_red,

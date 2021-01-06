@@ -20,6 +20,7 @@ OPENOCD_INTERFACE=$(SCRIPTS)/ft231x.ocd
 # ******* design files *******
 CONSTRAINTS = ../constraints/ulx3s_v20.lpf
 #TOP_MODULE = top_victest
+#TOP_MODULE_FILE = ../rtl/test/$(TOP_MODULE).vhd
 TOP_MODULE = top_ulx3s_v20_c64
 TOP_MODULE_FILE = ../rtl/$(TOP_MODULE).vhd
 
@@ -54,6 +55,7 @@ $(TOP_MODULE_FILE) \
 ../rtl/roms/rom_chargen_pack.vhd \
 ../rtl/fpga64_keyboard.vhd \
 ../rtl/video_vicII_656x.vhd \
+../rtl/video_2x_scan.vhd \
 ../rtl/fpga64_rgbcolor.vhd \
 ../rtl/osd/spi_ram_btn.vhd \
 ../rtl/osd/spi_osd.vhd \
