@@ -46,10 +46,11 @@ To start ESP32 OSD service, type or put in main.py
 
     import osd
 
-Onboard buttons act as joystick. To change joystick ports:
+Onboard buttons act as joystick. To change joystick port 1/2 press BTN2.
+LED D0 inidicates joystick port:
 
-    osd.ctrl(0)
-    osd.ctrl(4)
+    port 1 : LED D0 OFF
+    port 2 : LED D0 ON
 
 Press all 4 onboard cursor buttons to open OSD window and select a PRG file,
 navigate and press cursor right button at PRG file, it will be uploaded
