@@ -36,8 +36,6 @@ entity top_ulx3s_v20_c64 is
 
     ftdi_txd: in std_logic;
     ftdi_rxd: out std_logic;
-    ftdi_nrts: in std_logic;
-    ftdi_ndtr: in std_logic;
 
     -- WiFi additional signaling
     wifi_txd: in std_logic;
@@ -45,7 +43,6 @@ entity top_ulx3s_v20_c64 is
     wifi_gpio0  : out std_logic;
     wifi_gpio5  : in std_logic;
     wifi_gpio16 : inout std_logic;
-    --wifi_gpio17 : inout std_logic;
     
     -- Audio
     audio_l, audio_r, audio_v: out std_logic_vector(3 downto 0);
