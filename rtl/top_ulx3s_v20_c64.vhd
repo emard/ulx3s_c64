@@ -17,7 +17,7 @@ entity top_ulx3s_v20_c64 is
     -- doublescan
     -- 0: not doublescan : compiling easy,      video difficult : 1616x300@51Hz
     -- 1: yes doublescan : compiling difficult, video easy      :  720x576@51Hz
-    doublescan: integer := 0; -- 0:no, 1:yes
+    doublescan: integer := 1; -- 0:no, 1:yes
     -- SID version
     -- 0: SID6581 from C64 legacy. Problems: core produces low sound quality
     -- 1: SID8580 from C128. Core prdouces high sound quality (good for SPDIF)
