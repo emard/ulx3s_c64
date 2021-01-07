@@ -14,7 +14,7 @@ entity top_ulx3s_v20_c64 is
   generic
   (
     clk32_freq: integer := 32500000; -- Hz PLL output frequency
-    -- doublescan
+    -- doublescan (currently for 6569 PAL only)
     -- 0: not doublescan : compiling easy,      video difficult : 1616x300@51Hz
     -- 1: yes doublescan : compiling difficult, video easy      :  720x576@51Hz
     doublescan: integer := 1; -- 0:no, 1:yes
@@ -88,16 +88,38 @@ signal bram_mux_wr_data: unsigned(7 downto 0);
 
 -------------------------------------
 -- System state machine
-type sysCycleDef is (
-	CYCLE_IDLE0, CYCLE_IDLE1, CYCLE_IDLE2, CYCLE_IDLE3,
-	CYCLE_IDLE4, CYCLE_IDLE5, CYCLE_IDLE6, CYCLE_IDLE7,
-	CYCLE_IEC0,  CYCLE_IEC1,  CYCLE_IEC2,  CYCLE_IEC3,
-	CYCLE_VIC0,  CYCLE_VIC1,  CYCLE_VIC2,  CYCLE_VIC3,
-	CYCLE_CPU0,  CYCLE_CPU1,  CYCLE_CPU2,  CYCLE_CPU3,
-	CYCLE_CPU4,  CYCLE_CPU5,  CYCLE_CPU6,  CYCLE_CPU7,
-	CYCLE_CPU8,  CYCLE_CPU9,  CYCLE_CPUA,  CYCLE_CPUB,
-	CYCLE_CPUC,  CYCLE_CPUD,  CYCLE_CPUE,  CYCLE_CPUF
-);
+constant CYCLE_IDLE0: unsigned(4 downto 0) := to_unsigned( 0, 5);
+constant CYCLE_IDLE1: unsigned(4 downto 0) := to_unsigned( 1, 5);
+constant CYCLE_IDLE2: unsigned(4 downto 0) := to_unsigned( 2, 5);
+constant CYCLE_IDLE3: unsigned(4 downto 0) := to_unsigned( 3, 5);
+constant CYCLE_IDLE4: unsigned(4 downto 0) := to_unsigned( 4, 5);
+constant CYCLE_IDLE5: unsigned(4 downto 0) := to_unsigned( 5, 5);
+constant CYCLE_IDLE6: unsigned(4 downto 0) := to_unsigned( 6, 5);
+constant CYCLE_IDLE7: unsigned(4 downto 0) := to_unsigned( 7, 5);
+constant CYCLE_IEC0 : unsigned(4 downto 0) := to_unsigned( 8, 5);
+constant CYCLE_IEC1 : unsigned(4 downto 0) := to_unsigned( 9, 5);
+constant CYCLE_IEC2 : unsigned(4 downto 0) := to_unsigned(10, 5);
+constant CYCLE_IEC3 : unsigned(4 downto 0) := to_unsigned(11, 5);
+constant CYCLE_VIC0 : unsigned(4 downto 0) := to_unsigned(12, 5);
+constant CYCLE_VIC1 : unsigned(4 downto 0) := to_unsigned(13, 5);
+constant CYCLE_VIC2 : unsigned(4 downto 0) := to_unsigned(14, 5);
+constant CYCLE_VIC3 : unsigned(4 downto 0) := to_unsigned(15, 5);
+constant CYCLE_CPU0 : unsigned(4 downto 0) := to_unsigned(16, 5);
+constant CYCLE_CPU1 : unsigned(4 downto 0) := to_unsigned(17, 5);
+constant CYCLE_CPU2 : unsigned(4 downto 0) := to_unsigned(18, 5);
+constant CYCLE_CPU3 : unsigned(4 downto 0) := to_unsigned(19, 5);
+constant CYCLE_CPU4 : unsigned(4 downto 0) := to_unsigned(20, 5);
+constant CYCLE_CPU5 : unsigned(4 downto 0) := to_unsigned(21, 5);
+constant CYCLE_CPU6 : unsigned(4 downto 0) := to_unsigned(22, 5);
+constant CYCLE_CPU7 : unsigned(4 downto 0) := to_unsigned(23, 5);
+constant CYCLE_CPU8 : unsigned(4 downto 0) := to_unsigned(24, 5);
+constant CYCLE_CPU9 : unsigned(4 downto 0) := to_unsigned(25, 5);
+constant CYCLE_CPUA : unsigned(4 downto 0) := to_unsigned(26, 5);
+constant CYCLE_CPUB : unsigned(4 downto 0) := to_unsigned(27, 5);
+constant CYCLE_CPUC : unsigned(4 downto 0) := to_unsigned(28, 5);
+constant CYCLE_CPUD : unsigned(4 downto 0) := to_unsigned(29, 5);
+constant CYCLE_CPUE : unsigned(4 downto 0) := to_unsigned(30, 5);
+constant CYCLE_CPUF : unsigned(4 downto 0) := to_unsigned(31, 5);
 
 signal sysCycle     : unsigned(4 downto 0) := (others => '0');
 signal phi0_cpu     : std_logic;
@@ -255,6 +277,8 @@ signal	pot1        : std_logic_vector(7 downto 0);
 signal	pot2        : std_logic_vector(7 downto 0);
 signal	pot3        : std_logic_vector(7 downto 0);
 signal	pot4        : std_logic_vector(7 downto 0);
+signal  joy_sel     : std_logic; -- BTN2 toggles joy A/B
+signal  btn_debounce: std_logic_vector(6 downto 0);
 
 -- Connector to the SID
 signal	audio_data  : std_logic_vector(17 downto 0);
@@ -395,14 +419,14 @@ begin
 		enableCia_n <= '0';
 		enableCia_p <= '0';
 
-		if sysCycle = to_unsigned(sysCycleDef'pos(CYCLE_VIC2), sysCycle'length) then -- CYCLE_VIC2
+		if sysCycle = CYCLE_VIC2 then
 			enableVic <= '1';
-		elsif sysCycle = to_unsigned(sysCycleDef'pos(CYCLE_CPUC), sysCycle'length) then -- CYCLE_CPUC
+		elsif sysCycle = CYCLE_CPUC then
 			enableCia_n <= '1';
-		elsif sysCycle = to_unsigned(sysCycleDef'pos(CYCLE_CPUE), sysCycle'length) then -- CYCLE_CPUE
+		elsif sysCycle = CYCLE_CPUE then
 			enableVic <= '1';
 			enableCpu <= not R_cpu_control(1); -- halt
-		elsif sysCycle = to_unsigned(sysCycleDef'pos(CYCLE_CPUF), sysCycle'length) then -- CYCLE_CPUF
+		elsif sysCycle = CYCLE_CPUF then
 			enableCia_p <= '1';
 		end if;
 	end if;
@@ -436,7 +460,7 @@ begin
 				reset_cnt <= reset_cnt + 1;
 			end if;
 		end if;
-		if btn(0) = '0' or R_cpu_control(0) = '1' then
+		if R_btn_joy(0) = '0' or R_cpu_control(0) = '1' then
 			reset_cnt <= 0;
 		end if;
 	end if;
@@ -453,8 +477,21 @@ port map (
 	ps2_key  => ps2_key
 );
 
-joyA <= '0' & btn(2) & btn(1) & btn(6) & btn(5) & btn(4) & btn(3) when R_cpu_control(2)='0' else (others => '0');
-joyB <= '0' & btn(2) & btn(1) & btn(6) & btn(5) & btn(4) & btn(3) when R_cpu_control(2)='1' else (others => '0');
+-- process to toggle joy A/B with BTN2
+process(clk32)
+begin
+	if rising_edge(clk32) then
+		if vicVSync1 = '1' then
+			if R_btn_joy(2)='1' and btn_debounce(2)='0' then
+				joy_sel <= not joy_sel;
+			end if;
+			btn_debounce <= R_btn_joy;
+		end if;
+	end if;
+end process;
+
+joyA <= "00" & R_btn_joy(1) & R_btn_joy(6) & R_btn_joy(5) & R_btn_joy(4) & R_btn_joy(3) when joy_sel='0' else (others => '0');
+joyB <= "00" & R_btn_joy(1) & R_btn_joy(6) & R_btn_joy(5) & R_btn_joy(4) & R_btn_joy(3) when joy_sel='1' else (others => '0');
 
 Keyboard: entity work.fpga64_keyboard
 port map (
@@ -477,32 +514,30 @@ port map (
 -- -----------------------------------------------------------------------
 ba <= baLoc;
 
-io_cycle <= '1' when (sysCycle >= to_unsigned(sysCycleDef'pos(CYCLE_IDLE0),sysCycle'length)) and (sysCycle <= to_unsigned(sysCycleDef'pos(CYCLE_IEC3),sysCycle'length))
-       else '0';
+io_cycle <= '1' when sysCycle >= CYCLE_IDLE0 and sysCycle <= CYCLE_IEC3 else '0';
 
-idle <= '1' when (sysCycle >= to_unsigned(sysCycleDef'pos(CYCLE_IDLE4),sysCycle'length)) and (sysCycle <= to_unsigned(sysCycleDef'pos(CYCLE_IDLE7),sysCycle'length))
-   else '0';
+idle <= '1' when sysCycle >= CYCLE_IDLE4 and sysCycle <= CYCLE_IDLE7 else '0';
 
 iec_data_o <= not cia2_pao(5);
 iec_clk_o <= not cia2_pao(4);
 iec_atn_o <= not cia2_pao(3);
-ramDataOut <= "00" & cia2_pao(5 downto 3) & "000" when sysCycle >= to_unsigned(sysCycleDef'pos(CYCLE_IEC0),sysCycle'length) and sysCycle <= to_unsigned(sysCycleDef'pos(CYCLE_IEC3),sysCycle'length) else cpuDo;
+ramDataOut <= "00" & cia2_pao(5 downto 3) & "000" when sysCycle >= CYCLE_IEC0 and sysCycle <= CYCLE_IEC3 else cpuDo;
 ramAddr <= systemAddr;
-ramWe <= '0' when sysCycle = to_unsigned(sysCycleDef'pos(CYCLE_IEC2),sysCycle'length) or sysCycle = to_unsigned(sysCycleDef'pos(CYCLE_IEC3),sysCycle'length) else not systemWe;
+ramWe <= '0' when sysCycle = CYCLE_IEC2 or sysCycle = CYCLE_IEC3 else not systemWe;
 -- CPU2...CPUE or VIC0..VIC3
-ramCE <= '0' when ((sysCycle >= to_unsigned(sysCycleDef'pos(CYCLE_CPU2),sysCycle'length) and sysCycle <= to_unsigned(sysCycleDef'pos(CYCLE_CPUE),sysCycle'length))
-               or  (sysCycle >= to_unsigned(sysCycleDef'pos(CYCLE_VIC0),sysCycle'length) and sysCycle <= to_unsigned(sysCycleDef'pos(CYCLE_VIC3),sysCycle'length)))
+ramCE <= '0' when ((sysCycle >= CYCLE_CPU2 and sysCycle <= CYCLE_CPUE)
+               or  (sysCycle >= CYCLE_VIC0 and sysCycle <= CYCLE_VIC3))
               and cs_ram = '1' else '1';
 ramWeCE <= (not ramWe) and (not ramCE);
 
 process(clk32)
 begin
 	if rising_edge(clk32) then
-		if sysCycle = to_unsigned(sysCycleDef'pos(CYCLE_CPUD),sysCycle'length)
-		or sysCycle = to_unsigned(sysCycleDef'pos(CYCLE_VIC2),sysCycle'length) then
+		if sysCycle = CYCLE_CPUD
+		or sysCycle = CYCLE_VIC2 then
 			ramDataReg <= unsigned(ramDataIn);
 		end if;
-		if sysCycle = to_unsigned(sysCycleDef'pos(CYCLE_VIC3),sysCycle'length) then
+		if sysCycle = CYCLE_VIC3 then
 			lastVicDi <= vicDi;
 		end if;
 	end if;
@@ -700,7 +735,7 @@ begin
 	if rising_edge(clk32) then
 		pulseWrRam <= '0';
 		if cpuWe = '1' then
-			if sysCycle = to_unsigned(sysCycleDef'pos(CYCLE_CPUC),sysCycle'length) then
+			if sysCycle = CYCLE_CPUC then
 				pulseWrRam <= '1';
 			end if;
 		end if;
@@ -792,7 +827,7 @@ end process;
 serialBus: process(clk32)
 begin
 	if rising_edge(clk32) then
-		if sysCycle = to_unsigned(sysCycleDef'pos(CYCLE_IEC1),sysCycle'length) then
+		if sysCycle = CYCLE_IEC1 then
 			cia2_pai(7) <= iec_data_i and not cia2_pao(5);
 			cia2_pai(6) <= iec_clk_i and not cia2_pao(4);
 		end if;
@@ -991,7 +1026,7 @@ port map (
 div1m: process(clk32) -- this process divides 32 MHz to 1 MHz for the SID
 begin
 	if (rising_edge(clk32)) then
-		if sysCycle = to_unsigned(sysCycleDef'pos(CYCLE_VIC0), sysCycle'length) then
+		if sysCycle = CYCLE_VIC0 then
 			if clk_1MHz_sqr = '1' then
 				clk_1MHz_en <= '1'; -- single pulse
 			end if;
@@ -1079,7 +1114,8 @@ audio_v <= "00" & spdif_out & "0";
 
 ---------------------------------------------------------
 
-  led <= spi_ram_addr(7 downto 0);
+  led(7 downto 1) <= (others => '0');
+  led(0) <= joy_sel;
 
   -- SPI OSD pipeline
   spi_osd_inst: entity work.spi_osd
