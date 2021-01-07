@@ -17,7 +17,6 @@ from uctypes import addressof
 from struct import unpack
 import os
 import gc
-import ecp5
 
 gpio_cs   = const(5)
 gpio_sck  = const(25) # gn[11]
@@ -39,17 +38,14 @@ spi_write_osd = bytearray([0,0xFD,0,0,0])
 spi_channel = const(2)
 spi_freq = const(6000000)
 
-spi=SPI(spi_channel, baudrate=spi_freq, polarity=0, phase=0, bits=8, firstbit=SPI.MSB, sck=Pin(gpio_sck), mosi=Pin(gpio_mosi), miso=Pin(gpio_miso))
-cs=Pin(gpio_cs,Pin.OUT)
-cs.off()
-
-alloc_emergency_exception_buf(100)
-
-enable = bytearray(1)
-timer = Timer(3)
+def init_spi():
+  global spi,cs
+  spi=SPI(spi_channel, baudrate=spi_freq, polarity=0, phase=0, bits=8, firstbit=SPI.MSB, sck=Pin(gpio_sck), mosi=Pin(gpio_mosi), miso=Pin(gpio_miso))
+  cs=Pin(gpio_cs,Pin.OUT)
+  cs.off()
 
 @micropython.viper
-def irq_handler( pin):
+def irq_handler(pin):
   p8result = ptr8(addressof(spi_result))
   cs.on()
   spi.write_readinto(spi_read_irq, spi_result)
@@ -81,14 +77,14 @@ def irq_handler( pin):
         if btn==65: # btn6 cursor right
           select_entry()
 
-def start_autorepeat( i:int):
+def start_autorepeat(i:int):
   global autorepeat_direction, move_dir_cursor, timer_slow
   autorepeat_direction=i
   move_dir_cursor(i)
   timer_slow=1
   timer.init(mode=Timer.PERIODIC, period=500, callback=autorepeat)
 
-def autorepeat( timer):
+def autorepeat(timer):
   global timer_slow
   if timer_slow:
     timer_slow=0
@@ -158,16 +154,15 @@ def change_file():
       enable[0]=0
       osd_enable(0)
       spi.deinit()
-      tap=ecp5.ecp5()
-      tap.prog_stream(open(filename,"rb"),blocksize=1024)
+      import ecp5
+      ecp5.prog_stream(open(filename,"rb"),blocksize=1024)
       if filename.endswith("_sd.bit"):
         os.umount("/sd")
         for i in bytearray([2,4,12,13,14,15]):
           p=Pin(i,Pin.IN)
           a=p.value()
           del p,a
-      result=tap.prog_close()
-      del tap
+      result=ecp5.prog_close()
       gc.collect()
       #os.mount(SDCard(slot=3),"/sd") # BUG, won't work
       init_spi() # because of ecp5.prog() spi.deinit()
@@ -225,7 +220,7 @@ def change_file():
       gc.collect()
 
 @micropython.viper
-def osd_enable( en:int):
+def osd_enable(en:int):
   pena = ptr8(addressof(spi_enable_osd))
   pena[5] = en&1
   cs.on()
@@ -233,7 +228,7 @@ def osd_enable( en:int):
   cs.off()
 
 @micropython.viper
-def osd_print( x:int, y:int, i:int, text):
+def osd_print(x:int, y:int, i:int, text):
   p8msg=ptr8(addressof(spi_write_osd))
   a=0xF000+(x&63)+((y&31)<<6)
   p8msg[2]=i
@@ -255,7 +250,7 @@ def osd_cls():
   cs.off()
 
 # y is actual line on the screen
-def show_dir_line( y):
+def show_dir_line(y):
   if y < 0 or y >= screen_y:
     return
   mark = 0
@@ -283,7 +278,7 @@ def show_dir():
   for i in range(screen_y):
     show_dir_line(i)
 
-def move_dir_cursor( step):
+def move_dir_cursor(step):
   global fb_cursor, fb_topitem
   oldcursor = fb_cursor
   if step == 1:
@@ -348,7 +343,20 @@ def poke(addr,data):
   ctrl(4)
   ctrl(0)
 
+# mount SD can load initial bitstream
+try:
+  os.mount(SDCard(slot=3),"/sd")
+  import ecp5
+  ecp5.prog("/sd/c64/bitstreams/ulx3s_85f_v20_c64_origrom.bit")
+except:
+  print("check SD and ecp5.py")
+
 # initialization
+gc.collect()
+init_spi()
+alloc_emergency_exception_buf(100)
+enable = bytearray(1)
+timer = Timer(3)
 init_fb()
 read_dir()
 irq_handler(0) # service eventual pending/stale IRQ
@@ -356,7 +364,3 @@ irq_handler(0) # service eventual pending/stale IRQ
 irq_handler_ref = irq_handler # allocation happens here
 spi_request = Pin(0, Pin.IN, Pin.PULL_UP)
 spi_request.irq(trigger=Pin.IRQ_FALLING, handler=irq_handler_ref)
-
-#os.mount(SDCard(slot=3),"/sd")
-#ecp5.prog("/sd/vic20/bitstreams/ulx3s_vic20_32K_85f.bit")
-#gc.collect()
