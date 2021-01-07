@@ -31,6 +31,10 @@ From linux
     # to program flash, will persist after power off
     make flash
 
+With doublescan enabled in top module, there are difficulties
+with compiling for 12F. Trellis and Diamond 3.7 won't compile for 12F
+Diamond 3.11 will compile for 25F.
+
 # ESP32 OSD loader
 
 Download some PRG files and upload them to ESP32 flash or SD
