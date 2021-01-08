@@ -66,3 +66,11 @@ On C64 (65 = ASCII "A"):
 
     ?PEEK(9999)
     65
+
+# Problems
+
+"Raid on Bungeling Bay" (and probably few others) don't work.
+It shows ABC color strips screen, after pressing space 
+screen is filled with "@" and nothing more happens.
+Mister runs it correctly.
+
