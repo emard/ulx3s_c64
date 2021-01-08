@@ -69,7 +69,8 @@ On C64 (65 = ASCII "A"):
 
 # Problems
 
-"Raid on Bungeling Bay" (and probably few others) don't work.
+[Raid on Bungeling Bay](https://www.planetemu.net/rom/commodore-c64-games-prg/raid-on-bungeling-bay-1984-broderbund-h-abc)
+and few others probably, don't work.
 It shows ABC color strips screen, after pressing space 
 screen is filled with "@" and nothing more happens.
 Mister runs it correctly.
