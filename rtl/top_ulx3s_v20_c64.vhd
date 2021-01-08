@@ -13,15 +13,21 @@ use IEEE.numeric_std.ALL;
 entity top_ulx3s_v20_c64 is
   generic
   (
-    clk32_freq: integer := 32500000; -- Hz PLL output frequency
+    -- for trellis
+    --clk32_freq: integer := 32500000; -- Hz PLL output frequency
+    --clkim_freq: integer := 25000000; -- Hz PLL intermediate frequency (25 MHz -> 40 MHz -> 32 MHz)
+    -- for diamond
+    clk32_freq: integer := 32000000; -- Hz PLL output frequency
+    clkim_freq: integer := 40000000; -- Hz PLL intermediate frequency (25 MHz -> 40 MHz -> 32 MHz)
     -- doublescan (currently for 6569 PAL only)
     -- 0: not doublescan : compiling easy,      video difficult : 1616x300@51Hz
     -- 1: yes doublescan : compiling difficult, video easy      :  720x576@51Hz
     doublescan: integer := 1; -- 0:no, 1:yes
+    osd       : integer := 1; -- 0:no, 1:yes
     -- SID version
     -- 0: SID6581 from C64 legacy. Problems: core produces low sound quality
     -- 1: SID8580 from C128. Core prdouces high sound quality (good for SPDIF)
-    sid_ver: std_logic := '1' -- 0:6581, 1:8580
+    sid_ver   : std_logic := '1' -- 0:6581, 1:8580
   );
   port
   (
@@ -57,7 +63,6 @@ end;
 
 architecture Behavioral of top_ulx3s_v20_c64 is
 
-  signal clocks: std_logic_vector(3 downto 0);
   signal clk_pixel, clk_shift: std_logic;
   signal dvid_red, dvid_green, dvid_blue, dvid_clock: std_logic_vector(1 downto 0);
   
@@ -67,8 +72,8 @@ architecture Behavioral of top_ulx3s_v20_c64 is
 
 ----------------------------------------------------------
 constant resetCycles : integer := 4095;
-signal clk32: std_logic;
-signal clocks_c64: std_logic_vector(3 downto 0);
+signal clk32, clk32_locked: std_logic;
+signal clocks, clocks_c64: std_logic_vector(3 downto 0);
 
 -- after OSD module 
 signal osd_vga_r, osd_vga_g, osd_vga_b: std_logic_vector(7 downto 0);
@@ -363,17 +368,30 @@ begin
   wifi_rxd <= ftdi_txd;
   ftdi_rxd <= wifi_txd;
 
+  clk_intermediate_pll: entity work.ecp5pll
+  generic map
+  (
+      in_Hz => 25*1000000,
+    out0_Hz => clkim_freq
+  )
+  port map
+  (
+    clk_i   => clk_25MHz,
+    clk_o   => clocks
+  );
+
   clk_c64_pll: entity work.ecp5pll
   generic map
   (
-      in_Hz => natural(25.0e6),
+      in_Hz => clkim_freq,
     out0_Hz => clk32_freq*5,
     out1_Hz => clk32_freq
   )
   port map
   (
-    clk_i => clk_25MHz,
-    clk_o => clocks_c64
+    clk_i   => clocks(0),
+    clk_o   => clocks_c64,
+    locked  => clk32_locked
   );
   clk_shift <= clocks_c64(0);
   clk_pixel <= clocks_c64(1);
@@ -460,7 +478,7 @@ begin
 				reset_cnt <= reset_cnt + 1;
 			end if;
 		end if;
-		if R_btn_joy(0) = '0' or R_cpu_control(0) = '1' then
+		if R_btn_joy(0) = '0' or R_cpu_control(0) = '1' or clk32_locked = '0' then
 			reset_cnt <= 0;
 		end if;
 	end if;
@@ -767,7 +785,7 @@ port map (
 	sp_in => '1',
 	cnt_in => '1',
 
-	tod => vicVSync, -- FIXME not exactly 50Hz
+	tod => vicVSync1, -- FIXME not exactly 50Hz
 
 	irq_n => irq_cia1
 );
@@ -798,13 +816,14 @@ port map (
 	sp_in => uart_rxd,	-- Hooking up to the SP pin anyway, ready for the "UP9600" style serial.
 	cnt_in => '1',
 
-	tod => vicVSync, -- FIXME not exactly 50Hz
+	tod => vicVSync1, -- FIXME not exactly 50Hz
 
 	irq_n => irq_cia2
 );
 
+tod_clk: if false generate
 -- generate TOD clock from stable 32 MHz
--- Can we simply use vicVSync?
+-- Can we simply use vicVSync1?
 process(clk32, reset)
 begin
 	if reset = '1' then
@@ -822,6 +841,7 @@ begin
 		end if;
 	end if;
 end process;
+end generate;
 
 --serialBus
 serialBus: process(clk32)
@@ -991,7 +1011,7 @@ generic map
   xcenter     =>  89, -- increase -> picture moves left
   ycenter     =>  16, -- increase -> picture moves up
   hsync_width =>  15,
-  vsync_width =>  14,
+  vsync_width =>   3,
   color_bits  =>   4
 )
 port map
@@ -1114,7 +1134,9 @@ audio_v <= "00" & spdif_out & "0";
 
 ---------------------------------------------------------
 
-  led(7 downto 1) <= (others => '0');
+  led(7 downto 3) <= (others => '0');
+  led(2) <= vicHSync1;
+  led(1) <= vicVSync1;
   led(0) <= joy_sel;
 
   -- SPI OSD pipeline
@@ -1144,6 +1166,34 @@ audio_v <= "00" & spdif_out & "0";
     o_hsync => osd_vga_hsync, o_vsync => osd_vga_vsync, o_blank => osd_vga_blank
   );
 
+  not_osd: if osd = 0 generate
+  vga2dvid_instance: entity work.vga2dvid
+  generic map
+  (
+    C_ddr => '1',
+    C_shift_clock_synchronizer => '0'
+  )
+  port map
+  (
+    clk_pixel => clk_pixel,
+    clk_shift => clk_shift,
+
+    in_red    => std_logic_vector(vic_r(7 downto 0)),
+    in_green  => std_logic_vector(vic_g(7 downto 0)),
+    in_blue   => std_logic_vector(vic_b(7 downto 0)),
+    in_hsync  => vicHSync,
+    in_vsync  => vicVSync,
+    in_blank  => vicBlank,
+
+    -- single-ended output ready for differential buffers
+    out_red   => dvid_red,
+    out_green => dvid_green,
+    out_blue  => dvid_blue,
+    out_clock => dvid_clock
+  );
+  end generate;
+
+  yes_osd: if osd /= 0 generate
   vga2dvid_instance: entity work.vga2dvid
   generic map
   (
@@ -1168,6 +1218,7 @@ audio_v <= "00" & spdif_out & "0";
     out_blue  => dvid_blue,
     out_clock => dvid_clock
   );
+  end generate;
 
   -- vendor specific DDR modules
   -- convert SDR 2-bit input to DDR clocked 1-bit output (single-ended)
