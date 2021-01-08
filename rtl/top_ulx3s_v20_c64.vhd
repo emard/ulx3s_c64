@@ -15,7 +15,7 @@ entity top_ulx3s_v20_c64 is
   (
     -- for trellis 85F
     --clk32_freq: integer := 32500000; -- Hz PLL output frequency
-    --clkim_freq: integer := 25000000; -- Hz PLL intermediate frequency (25 MHz -> 40 MHz -> 32 MHz)
+    --clkim_freq: integer := 25000000; -- Hz PLL intermediate frequency (25 MHz -> 25 MHz -> 32.5 MHz)
     -- for trellis 12F or diamond 12F/85F
     clk32_freq: integer := 32000000; -- Hz PLL output frequency
     clkim_freq: integer := 40000000; -- Hz PLL intermediate frequency (25 MHz -> 40 MHz -> 32 MHz)
