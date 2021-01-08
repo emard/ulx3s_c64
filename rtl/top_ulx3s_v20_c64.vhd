@@ -1134,9 +1134,7 @@ audio_v <= "00" & spdif_out & "0";
 
 ---------------------------------------------------------
 
-  led(7 downto 3) <= (others => '0');
-  led(2) <= vicHSync1;
-  led(1) <= vicVSync1;
+  led(7 downto 1) <= (others => '0');
   led(0) <= joy_sel;
 
   -- SPI OSD pipeline
