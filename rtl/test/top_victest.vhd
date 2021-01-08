@@ -13,6 +13,10 @@ use IEEE.numeric_std.ALL;
 entity top_victest is
   generic
   (
+    -- doublescan (currently for 6569 PAL only)
+    -- 0: not doublescan : compiling easy,      video difficult : 1616x300@51Hz
+    -- 1: yes doublescan : compiling difficult, video easy      :  720x576@51Hz
+    doublescan: integer := 1; -- 0:no, 1:yes
     -- test picture generator
     x        : natural :=  720; -- pixels
     y        : natural :=  576; -- pixels
@@ -203,10 +207,12 @@ signal toddiv       : std_logic_vector(19 downto 0);
 signal toddiv3      : std_logic_vector(1 downto 0);
 
 -- video
-signal vicColorIndex, vicColorIndex2 : unsigned(3 downto 0);
-signal vicHSync, vicHSync2           : std_logic;
-signal vicVSync, vicVSync2           : std_logic;
-signal vicBlank, vicBlank2           : std_logic;
+signal vicColorIndex, vicColorIndex1 : unsigned(3 downto 0);
+signal vicHSync     , vicHSync1      : std_logic;
+signal vicVSync     , vicVSync1      : std_logic;
+signal vicBlank     , vicBlank1      : std_logic;
+signal vicHSyncn    , vicHSyncn1     : std_logic;
+signal vicVSyncn    , vicVSyncn1     : std_logic;
 signal vicBus       : unsigned(7 downto 0);
 signal vicDi        : unsigned(7 downto 0);
 signal vicDiAec     : unsigned(7 downto 0);
@@ -217,6 +223,7 @@ signal vicAddr1514  : unsigned(1 downto 0);
 signal colorQ       : unsigned(3 downto 0);
 signal colorData    : unsigned(3 downto 0);
 signal colorDataAec : unsigned(3 downto 0);
+
 
 -- VGA/SCART interface
 signal	vic_r       : unsigned(7 downto 0);
@@ -242,16 +249,28 @@ begin
   --clk_pixel <= clocks(1);
 
 ---------------------------------------------------------
-  clk_c64_pll: entity work.ecp5pll
+  clk_40_pll: entity work.ecp5pll
   generic map
   (
       in_Hz => natural(25.0e6),
-    out0_Hz => natural(32.5e6)*5,
-    out1_Hz => natural(32.5e6)
+    out0_Hz => natural(40.0e6)
   )
   port map
   (
     clk_i => clk_25MHz,
+    clk_o => clocks
+  );
+
+  clk_c64_pll: entity work.ecp5pll
+  generic map
+  (
+      in_Hz => natural(40.0e6),
+    out0_Hz => natural(32.0e6)*5,
+    out1_Hz => natural(32.0e6)
+  )
+  port map
+  (
+    clk_i => clocks(0),
     clk_o => clocks_c64
   );
   clk_shift <= clocks_c64(0);
@@ -404,45 +423,58 @@ port map (
 	addrValid => aec,
 
 	-- VGA
-	hsync => vicHSync,
-	vsync => vicVSync,
-	blank => vicBlank,
-	colorIndex => vicColorIndex,
+	hsync => vicHSync1,
+	vsync => vicVSync1,
+	blank => vicBlank1,
+	colorIndex => vicColorIndex1,
 
 	lp_n => cia1_pbi(4), -- light pen
 	irq_n => irq_vic
 );
 
-u_scan_doubler : entity work.video_2x_scan
+no_doublescan: if doublescan = 0 generate
+vicColorIndex <= vicColorIndex1;
+vicHSync      <= vicHSync1;
+vicVSync      <= vicVSync1;
+vicBlank      <= vicBlank1;
+end generate;
+
+yes_doublescan: if doublescan /= 0 generate
+--vicHSyncn1 <= not vicHSync1;
+--vicVSyncn1 <= not vicVSync1;
+scan_doubler : entity work.video_2x_scan
 generic map
 (
   xsize       => 360, -- DVI picture size is 2x this value
   ysize       => 288, -- DVI picture size is 2x this value
-  xcenter     =>  92, -- increase -> picture moves left
+  xcenter     =>  89, -- increase -> picture moves left
   ycenter     =>  16, -- increase -> picture moves up
   hsync_width =>  15,
-  vsync_width =>  14,
+  vsync_width =>   3,
   color_bits  =>   4
 )
 port map
 (
-  I_COLOR      => vicColorIndex,
-  I_HSYNC      => vicHSync,
-  I_VSYNC      => vicVSync,
+  CLK         => clk32,
+  ENA         => enablePixel,
+  ENA_X2      => enablePixel2,
 
-  O_COLOR      => vicColorIndex2,
-  O_HSYNC      => vicHSync2,
-  O_VSYNC      => vicVSync2,
-  O_BLANK      => vicBlank2,
+  I_COLOR     => vicColorIndex1,
+  I_HSYNC     => vicHSync1,
+  I_VSYNC     => vicVSync1,
 
-  ENA_X2       => enablePixel2,
-  ENA          => enablePixel,
-  CLK          => clk32
+  O_COLOR     => vicColorIndex,
+  O_HSYNC     => vicHSync,
+  O_VSYNC     => vicVSync,
+  O_BLANK     => vicBlank
 );
+--vicHSync <= not vicHSyncn;
+--vicVSync <= not vicVSyncn;
+end generate;
 
 c64colors: entity work.fpga64_rgbcolor
 port map (
-	index => vicColorIndex2,
+	index => vicColorIndex,
 	r => vic_r,
 	g => vic_g,
 	b => vic_b
@@ -520,9 +552,9 @@ port map (
     in_red    => std_logic_vector(vic_r),
     in_green  => std_logic_vector(vic_g),
     in_blue   => std_logic_vector(vic_b),
-    in_hsync  => vicHSync2,
-    in_vsync  => vicVSync2,
-    in_blank  => vicBlank2,
+    in_hsync  => vicHSync,
+    in_vsync  => vicVSync,
+    in_blank  => vicBlank,
 
     -- single-ended output ready for differential buffers
     out_red   => dvid_red,
