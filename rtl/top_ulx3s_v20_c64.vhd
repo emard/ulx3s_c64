@@ -1093,8 +1093,13 @@ port map (
 	sample_left => audio_6581,
 	sample_right => open
 );
-audio_data  <= std_logic_vector(audio_6581);
-spdif_in    <= "000" & audio_data & "000";
+process(clk32)
+begin
+  if rising_edge(clk32) then
+    audio_data <= std_logic_vector(audio_6581);
+  end if;
+end process;
+spdif_in <= "000" & audio_data & "000";
 end generate;
 
 -- compile will never finish, therefore commented
@@ -1113,7 +1118,12 @@ port map (
 	audio_data => audio_8580,
 	extfilter_en => extfilter_en
 );
-audio_data  <= audio_8580;
+process(clk32)
+begin
+  if rising_edge(clk32) then
+    audio_data <= audio_8580;
+  end if;
+end process;
 spdif_in    <= "0" & audio_data & "00000";
 end generate;
 
