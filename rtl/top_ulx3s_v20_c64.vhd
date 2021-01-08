@@ -13,10 +13,10 @@ use IEEE.numeric_std.ALL;
 entity top_ulx3s_v20_c64 is
   generic
   (
-    -- for trellis
+    -- for trellis 85F
     --clk32_freq: integer := 32500000; -- Hz PLL output frequency
     --clkim_freq: integer := 25000000; -- Hz PLL intermediate frequency (25 MHz -> 40 MHz -> 32 MHz)
-    -- for diamond
+    -- for trellis 12F or diamond 12F/85F
     clk32_freq: integer := 32000000; -- Hz PLL output frequency
     clkim_freq: integer := 40000000; -- Hz PLL intermediate frequency (25 MHz -> 40 MHz -> 32 MHz)
     -- doublescan (currently for 6569 PAL only)
