@@ -9,9 +9,9 @@ $(TOP_MODULE_FILE) \
 ../rtl/fpga64_buslogic.vhd \
 ../rtl/bram_true2p_2clk.vhd \
 ../rtl/dprom_kernal.vhd \
-../rtl/roms/rom_kernal_pack.vhd \
+../rtl/roms/rom_kernal_pack_orig.vhd \
 ../rtl/dprom_chargen.vhd \
-../rtl/roms/rom_chargen_pack.vhd \
+../rtl/roms/rom_chargen_pack_orig.vhd \
 ../rtl/fpga64_keyboard.vhd \
 ../rtl/video_vicII_656x.vhd \
 ../rtl/video_2x_scan.vhd \
@@ -34,6 +34,7 @@ $(TOP_MODULE_FILE) \
 ../rtl/sid6581/adsr_multi.vhd \
 ../rtl/sid6581/sid_debug_pkg.vhd \
 ../rtl/sid8580/sid8580_vhd.vhd \
+../rtl/dacpwm.vhd \
 ../rtl/spdif_tx.vhd \
 
 VERILOG_FILES = \

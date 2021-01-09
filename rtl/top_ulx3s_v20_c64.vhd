@@ -27,7 +27,8 @@ entity top_ulx3s_v20_c64 is
     -- SID version
     -- 0: SID6581 from C64 legacy. Problems: core produces low sound quality
     -- 1: SID8580 from C128. Core prdouces high sound quality (good for SPDIF)
-    sid_ver   : std_logic := '1' -- 0:6581, 1:8580
+    sid_ver   : std_logic := '1'; -- 0:6581, 1:8580
+    dacpwm    : integer := 14 -- 3.5mm jack: 0:direct 4-bit, 8-14:bit to 4-bit dacpwm
   );
   port
   (
@@ -292,6 +293,8 @@ signal	sid_we_ext  : std_logic;
 signal	sid_mode    : std_logic_vector(1 downto 0);
 signal  spdif_in    : std_logic_vector(23 downto 0);
 signal  spdif_out   : std_logic;
+signal audio_pcm    : std_logic_vector(dacpwm-1 downto 0);
+signal audio_dac    : std_logic_vector(3 downto 0);
 
 -- IEC
 signal	iec_data_o  : std_logic;
@@ -1127,8 +1130,28 @@ end process;
 spdif_in    <= "0" & audio_data & "00000";
 end generate;
 
+not_dacpwm: if dacpwm = 0 generate
 audio_l     <= audio_data(audio_data'high downto audio_data'high-3);
 audio_r     <= audio_data(audio_data'high downto audio_data'high-3);
+end generate;
+
+yes_dacpwm: if dacpwm /= 0 generate
+audio_pcm <= '0' & audio_data(audio_data'high downto audio_data'high-dacpwm+2);
+dacpwm_inst: entity work.dacpwm
+generic map
+(
+	c_pcm_bits => dacpwm,
+	c_dac_bits => 4
+)
+port map
+(
+	clk => clk32,
+	pcm => audio_pcm,
+	dac => audio_dac
+);
+audio_l <= audio_dac;
+audio_r <= audio_dac;
+end generate;
 
 spdif_tx_inst: entity work.spdif_tx
 generic map (
