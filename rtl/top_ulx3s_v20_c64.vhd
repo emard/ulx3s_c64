@@ -226,11 +226,9 @@ constant osd_start_x: T_2x_scan := (128, 104);
 constant osd_start_y: T_2x_scan := (  6, 140);
 
 -- VGA/SCART interface
-signal	vic_r       : unsigned(7 downto 0);
-signal	vic_g       : unsigned(7 downto 0);
-signal	vic_b       : unsigned(7 downto 0);
-
-signal  vicydummy   : unsigned(15 downto 0); -- debug VIC filler
+signal vic_r        : unsigned(7 downto 0);
+signal vic_g        : unsigned(7 downto 0);
+signal vic_b        : unsigned(7 downto 0);
 
 -- SID signals
 signal sid_do       : std_logic_vector(7 downto 0);
@@ -248,8 +246,6 @@ signal sid_pot_x    : std_logic_vector(7 downto 0);
 signal sid_pot_y    : std_logic_vector(7 downto 0);
 signal audio_8580   : std_logic_vector(17 downto 0);
 signal clk_1MHz_en  : std_logic; -- single clk pulse
-signal clk_1MHz_sqr : std_logic; -- square wave
-
 
 -- "external" connections, in this project internal
 -- cartridge port
@@ -407,11 +403,7 @@ begin
 process(clk32)
 begin
   if rising_edge(clk32) then
-    --if sysCycle = to_unsigned(31,sysCycle'length) then
-    --  syscycle <= to_unsigned(0,sysCycle'length); -- reset to idle cycle (0-2) to fit 50Hz refresh
-    --else
       sysCycle <= sysCycle+1;
-    --end if;
   end if;
 end process;
 
@@ -419,13 +411,12 @@ end process;
 process(clk32)
 begin
 	if rising_edge(clk32) then
-		if sysCycle = to_unsigned(15,sysCycle'length) then
+		if sysCycle = CYCLE_VIC3 then
 			phi0_cpu <= '1';
 			if baLoc = '1' or cpuWe = '1' then
 				cpuHasBus <= '1';
 			end if;
-		end if;
-		if sysCycle = to_unsigned(31,sysCycle'length) then
+		elsif sysCycle = CYCLE_CPUF then
 			phi0_cpu <= '0';
 			cpuHasBus <= '0';
 		end if;
@@ -435,19 +426,22 @@ end process;
 process(clk32)
 begin
 	if rising_edge(clk32) then
-		enableCpu <= '0';
-		enableVic <= '0';
-		enableCia_n <= '0';
-		enableCia_p <= '0';
-
-		if sysCycle = CYCLE_VIC2 then
+		if    sysCycle = CYCLE_IDLE0 then
+		        enableCia_p <= '0';
+		elsif sysCycle = CYCLE_VIC2 then
 			enableVic <= '1';
+		elsif sysCycle = CYCLE_VIC3 then
+		        enableVic <= '0';
 		elsif sysCycle = CYCLE_CPUC then
 			enableCia_n <= '1';
+		elsif sysCycle = CYCLE_CPUD then
+			enableCia_n <= '0';
 		elsif sysCycle = CYCLE_CPUE then
 			enableVic <= '1';
 			enableCpu <= not R_cpu_control(1); -- halt
 		elsif sysCycle = CYCLE_CPUF then
+		        enableVic <= '0';
+		        enableCpu <= '0';
 			enableCia_p <= '1';
 		end if;
 	end if;
@@ -457,7 +451,6 @@ end process;
 process(clk32)
 begin
 	if rising_edge(clk32) then
-		enablePixel <= '0';
 		if sysCycle(1 downto 0) = "10" then
 			enablePixel <= '1';
                 else
@@ -473,16 +466,15 @@ enablePixel2 <= sysCycle(0);
 calcReset: process(clk32)
 begin
 	if rising_edge(clk32) then
-		if sysCycle = to_unsigned(31,sysCycle'length) then
+		if R_btn_joy(0) = '0' or R_cpu_control(0) = '1' or clk32_locked = '0' then
+			reset_cnt <= 0;
+                elsif sysCycle = CYCLE_CPUF then
 			if reset_cnt = resetCycles then
 				reset <= '0';
 			else
 				reset <= '1';
 				reset_cnt <= reset_cnt + 1;
 			end if;
-		end if;
-		if R_btn_joy(0) = '0' or R_cpu_control(0) = '1' or clk32_locked = '0' then
-			reset_cnt <= 0;
 		end if;
 	end if;
 end process;
@@ -620,7 +612,6 @@ port map
 	data_out_a => ramDataIn
 );
 
-
 process(clk32)
 begin
   if rising_edge(clk32) then
@@ -754,11 +745,10 @@ port map (
 process(clk32)
 begin
 	if rising_edge(clk32) then
-		pulseWrRam <= '0';
-		if cpuWe = '1' then
-			if sysCycle = CYCLE_CPUC then
-				pulseWrRam <= '1';
-			end if;
+		if cpuWe = '1' and sysCycle = CYCLE_CPUC then
+                        pulseWrRam <= '1';
+                else
+                        pulseWrRam <= '0';
 		end if;
 	end if;
 end process;
@@ -829,14 +819,11 @@ tod_clk: if false generate
 -- Can we simply use vicVSync1?
 process(clk32, reset)
 begin
-	if reset = '1' then
-		todclk <= '0';
-		toddiv <= (others => '0');
-	elsif rising_edge(clk32) then
+	if rising_edge(clk32) then
 		toddiv <= toddiv + 1;
 		if (ntscMode = '1' and toddiv = 27082 and toddiv3 = "00") or
 			(ntscMode = '1' and toddiv = 27083 and toddiv3 /= "00") or
-			toddiv = 324999 then
+			toddiv = 31999 then
 			toddiv <= (others => '0');
 			todclk <= not todclk;
 			toddiv3 <= toddiv3 + 1;
@@ -906,7 +893,6 @@ IOE <= cs_ioE;
 IOF <= cs_ioF;
 UMAXromH <= cs_UMAXromH;
 CPU_hasbus <= cpuHasBus;
-
 
 -- -----------------------------------------------------------------------
 -- VIC-II video interface chip
@@ -1050,10 +1036,7 @@ div1m: process(clk32) -- this process divides 32 MHz to 1 MHz for the SID
 begin
 	if (rising_edge(clk32)) then
 		if sysCycle = CYCLE_VIC0 then
-			if clk_1MHz_sqr = '1' then
-				clk_1MHz_en <= '1'; -- single pulse
-			end if;
-			clk_1MHz_sqr <= not clk_1MHz_sqr;
+                        clk_1MHz_en <= '1'; -- single pulse
 		else
 			clk_1MHz_en <= '0';
 		end if;
