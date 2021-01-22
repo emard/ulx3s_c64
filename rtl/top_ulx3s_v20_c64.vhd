@@ -6,6 +6,8 @@ use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.STD_LOGIC_UNSIGNED.ALL;
 use IEEE.numeric_std.ALL;
 
+use work.st7789_init_pack.all;
+
 -- for diamond (not for opensource tools yosys/trellis)
 --library ecp5u;
 --use ecp5u.components.all;
@@ -22,8 +24,9 @@ entity top_ulx3s_v20_c64 is
     -- doublescan (currently for 6569 PAL only)
     -- 0: not doublescan : compiling easy,      video difficult : 1616x300@51Hz
     -- 1: yes doublescan : compiling difficult, video easy      :  720x576@51Hz
-    doublescan: integer := 1; -- 0:no, 1:yes
+    doublescan: integer := 0; -- 0:no, 1:yes
     osd       : integer := 1; -- 0:no, 1:yes
+    lcd       : integer := 1; -- ST7789 LCD mini-display (need doublescan=0, osd=1)
     -- SID version
     -- 0: SID6581 from C64 legacy. Problems: core produces low sound quality
     -- 1: SID8580 from C128. Core prdouces high sound quality (good for SPDIF)
@@ -56,6 +59,13 @@ entity top_ulx3s_v20_c64 is
     
     -- Audio
     audio_l, audio_r, audio_v: out std_logic_vector(3 downto 0);
+
+    -- LCD/OLED display
+    oled_clk       : out   std_logic;
+    oled_mosi      : out   std_logic;
+    oled_dc        : out   std_logic;
+    oled_resn      : out   std_logic;
+    oled_csn       : out   std_logic;
 
     -- Digital Video (differential outputs)
     gpdi_dp: out std_logic_vector(3 downto 0)
@@ -394,7 +404,7 @@ begin
   );
   clk_shift <= clocks_c64(0);
   clk_pixel <= clocks_c64(1);
-  clk32     <= clk_pixel; -- 32.5 MHz
+  clk32     <= clk_pixel;
 
 -- -----------------------------------------------------------------------
 -- System state machine, controls bus accesses
@@ -1240,5 +1250,65 @@ audio_v <= "00" & spdif_out & "0";
   ddr_red:   ODDRX1F port map (D0=>dvid_red(0),   D1=>dvid_red(1),   Q=>gpdi_dp(2), SCLK=>clk_shift, RST=>'0');
   ddr_green: ODDRX1F port map (D0=>dvid_green(0), D1=>dvid_green(1), Q=>gpdi_dp(1), SCLK=>clk_shift, RST=>'0');
   ddr_blue:  ODDRX1F port map (D0=>dvid_blue(0),  D1=>dvid_blue(1),  Q=>gpdi_dp(0), SCLK=>clk_shift, RST=>'0');
+
+  yes_lcd_yes_osd: if lcd /= 0 and osd /= 0 generate
+  lcd_vga_blk: block
+    signal r_ena_count: unsigned(2 downto 0);
+    signal r_line: unsigned(8 downto 0);
+    signal r_hsync: std_logic_vector(1 downto 0);
+    signal r_lcd_pix_ena: std_logic;
+    signal s_vga_lcd_pixel: std_logic_vector(15 downto 0) := (others => '0');
+  begin
+  process(clk_pixel)
+  begin
+    if rising_edge(clk_pixel) then
+      if r_ena_count = to_unsigned(4,3) then -- div 5
+        r_ena_count <= (others => '0');
+        r_lcd_pix_ena <= '1';
+      else
+        r_ena_count <= r_ena_count + 1;
+        r_lcd_pix_ena <= '0';
+      end if;
+      r_hsync <= vicHSync & r_hsync(r_hsync'high downto 1);
+      if r_hsync = "10" then -- rising edge
+        r_line <= r_line+1;
+      end if;
+    end if;
+  end process;
+  S_vga_lcd_pixel(15 downto 11) <= std_logic_vector(osd_vga_r(7 downto 3));
+  S_vga_lcd_pixel(10 downto  5) <= std_logic_vector(osd_vga_g(7 downto 2));
+  S_vga_lcd_pixel( 4 downto  0) <= std_logic_vector(osd_vga_b(7 downto 3));
+  lcd_vga_inst: entity work.spi_display
+  generic map
+  (
+    c_clk_spi_mhz  => clk32_freq*5/1000000,
+    c_reset_us     => 1,
+    c_color_bits   => 16,
+    c_clk_phase    => '0',
+    c_clk_polarity => '1',
+    c_x_size       => 240,
+    c_y_size       => 240,
+    c_init_seq     => c_st7789_init_seq,
+    c_nop          => x"00"
+  )
+  port map
+  (
+    reset          => not R_btn_joy(0),
+    clk_pixel      => clk_pixel, -- 32 MHz
+    clk_pixel_ena  => r_lcd_pix_ena,
+    clk_spi        => clk_shift, -- 160 MHz
+    clk_spi_ena    => '1',
+    vsync          => osd_vga_vsync,
+    blank          => osd_vga_blank,
+    color          => s_vga_lcd_pixel,
+    spi_resn       => oled_resn,
+    spi_clk        => oled_clk, -- clk/2 (display max 64 MHz)
+    --spi_csn        => oled_csn, -- for 8-pin 1.54" ST7789
+    spi_dc         => oled_dc,
+    spi_mosi       => oled_mosi
+  );
+  oled_csn <= '1'; -- for 7-pin 1.3" ST7789
+  end block;
+  end generate;
 
 end Behavioral;

@@ -9,9 +9,9 @@ $(TOP_MODULE_FILE) \
 ../rtl/fpga64_buslogic.vhd \
 ../rtl/bram_true2p_2clk.vhd \
 ../rtl/dprom_kernal.vhd \
-../rtl/roms/rom_kernal_pack_orig.vhd \
+../rtl/roms/rom_kernal_pack.vhd \
 ../rtl/dprom_chargen.vhd \
-../rtl/roms/rom_chargen_pack_orig.vhd \
+../rtl/roms/rom_chargen_pack.vhd \
 ../rtl/fpga64_keyboard.vhd \
 ../rtl/video_vicII_656x.vhd \
 ../rtl/video_2x_scan.vhd \
@@ -21,6 +21,9 @@ $(TOP_MODULE_FILE) \
 ../rtl/dvi/vga.vhd \
 ../rtl/dvi/vga2dvid.vhd \
 ../rtl/dvi/tmds_encoder.vhd \
+../rtl/spi_display/spi_display.vhd \
+../rtl/spi_display/spi_display_init_pack.vhd \
+../rtl/spi_display/st7789_init_pack.vhd \
 ../rtl/sid6581/my_math_pkg.vhd \
 ../rtl/sid6581/mult_acc.vhd \
 ../rtl/sid6581/oscillator.vhd \
@@ -49,3 +52,4 @@ VERILOG_FILES = \
 ../rtl/sid8580/sid_envelope.v \
 ../rtl/sid8580/sid_voice.v \
 ../rtl/sid8580/sid_tables.v \
+
