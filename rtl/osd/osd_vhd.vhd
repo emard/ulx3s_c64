@@ -7,8 +7,8 @@ entity osd_vhd is
   generic
   (
     c_x_start       : natural := 128; -- x1  pixel window h-position
-    c_x_stop        : natural := 383; -- x1  pixel window v-position
-    c_y_start       : natural := 128; -- x1  pixel window h-position
+    c_x_stop        : natural := 383; -- x1  pixel window h-position
+    c_y_start       : natural := 128; -- x1  pixel window v-position
     c_y_stop        : natural := 383; -- x1  pixel window v-position
     c_x_bits        : natural :=  10; -- bits in x counter
     c_y_bits        : natural :=  10; -- bits in y counter

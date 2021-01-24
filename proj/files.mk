@@ -18,6 +18,7 @@ $(TOP_MODULE_FILE) \
 ../rtl/fpga64_rgbcolor.vhd \
 ../rtl/osd/spi_ram_btn.vhd \
 ../rtl/osd/spi_osd.vhd \
+../rtl/osd/osd_vhd.vhd \
 ../rtl/dvi/vga.vhd \
 ../rtl/dvi/vga2dvid.vhd \
 ../rtl/dvi/tmds_encoder.vhd \

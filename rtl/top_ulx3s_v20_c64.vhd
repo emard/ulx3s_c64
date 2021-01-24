@@ -1253,11 +1253,16 @@ audio_v <= "00" & spdif_out & "0";
 
   yes_lcd_yes_osd: if lcd /= 0 and osd /= 0 generate
   lcd_vga_blk: block
+    constant c_offset_x : natural :=  28; -- x-centering inc->move picture left
+    constant c_offset_y : natural :=  33; -- y-centering inc->move picture up
+    constant c_size_x   : natural := 240;
+    constant c_size_y   : natural := 240;
     signal r_ena_count: unsigned(2 downto 0);
     signal r_line: unsigned(8 downto 0);
     signal r_hsync: std_logic_vector(1 downto 0);
     signal r_lcd_pix_ena: std_logic;
     signal s_vga_lcd_pixel: std_logic_vector(15 downto 0) := (others => '0');
+    signal s_custom_blankn, s_custom_blank: std_logic;
   begin
   process(clk_pixel)
   begin
@@ -1275,6 +1280,33 @@ audio_v <= "00" & spdif_out & "0";
       end if;
     end if;
   end process;
+  -- generate custom blank to center xy
+  lcd_custom_blank_inst: entity work.osd_vhd
+  generic map
+  (
+    c_x_start       => c_offset_x,
+    c_x_stop        => c_offset_x+c_size_x+4,
+    c_y_start       => c_offset_y,
+    c_y_stop        => c_offset_y+c_size_y+4,
+    c_x_bits        => 10, -- bits in x counter
+    c_y_bits        => 10, -- bits in y counter
+    c_transparency  =>  0  -- 1:see-thru OSD menu 0:opaque
+  )
+  port map
+  (
+    clk_pixel => clk_pixel,
+    clk_pixel_ena => r_lcd_pix_ena,
+    i_r => x"--", i_g => x"--", i_b => x"--",
+    i_hsync => osd_vga_hsync,
+    i_vsync => osd_vga_vsync,
+    i_blank => osd_vga_blank,
+    i_osd_en => '0',
+    i_osd_r => x"--", i_osd_g => x"--", i_osd_b => x"--",
+    o_osd_en => s_custom_blankn
+  );
+  s_custom_blank <= not s_custom_blankn;
+  --s_custom_blank <= osd_vga_blank; -- debug to use original blank
+  --S_vga_lcd_pixel(15 downto 11) <= (others => s_custom_blankn); -- debug to see custom blank area
   S_vga_lcd_pixel(15 downto 11) <= std_logic_vector(osd_vga_r(7 downto 3));
   S_vga_lcd_pixel(10 downto  5) <= std_logic_vector(osd_vga_g(7 downto 2));
   S_vga_lcd_pixel( 4 downto  0) <= std_logic_vector(osd_vga_b(7 downto 3));
@@ -1286,8 +1318,8 @@ audio_v <= "00" & spdif_out & "0";
     c_color_bits   => 16,
     c_clk_phase    => '0',
     c_clk_polarity => '1',
-    c_x_size       => 240,
-    c_y_size       => 240,
+    c_x_size       => c_size_x,
+    c_y_size       => c_size_y,
     c_init_seq     => c_st7789_init_seq,
     c_nop          => x"00"
   )
@@ -1299,7 +1331,7 @@ audio_v <= "00" & spdif_out & "0";
     clk_spi        => clk_shift, -- 160 MHz
     clk_spi_ena    => '1',
     vsync          => osd_vga_vsync,
-    blank          => osd_vga_blank,
+    blank          => s_custom_blank, -- osd_vga_blank,
     color          => s_vga_lcd_pixel,
     spi_resn       => oled_resn,
     spi_clk        => oled_clk, -- clk/2 (display max 64 MHz)
