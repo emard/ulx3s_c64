@@ -233,7 +233,7 @@ signal colorDataAec : unsigned(3 downto 0);
 
 type T_2x_scan is array (natural range <>) of integer;
 constant osd_start_x: T_2x_scan := (128, 104);
-constant osd_start_y: T_2x_scan := (  6, 140);
+constant osd_start_y: T_2x_scan := ( 34, 140);
 
 -- VGA/SCART interface
 signal vic_r        : unsigned(7 downto 0);
@@ -1169,7 +1169,7 @@ audio_v <= "00" & spdif_out & "0";
   (
     c_start_x      => osd_start_x(doublescan), -- x centering increase -> right
     c_start_y      => osd_start_y(doublescan), -- y centering increase -> down
-    c_char_bits_x  =>  6, c_chars_y => 18, -- xy size, slightly less than full screen
+    c_char_bits_x  =>  6, c_chars_y => 15, -- xy size, slightly less than full screen
     c_bits_x       => 11, c_bits_y  =>  9, -- xy counters bits
     c_inverse      =>  1, -- 1:support inverse video 0:no inverse video
     c_transparency =>  1, -- 1:semi-tranparent 0:opaque
@@ -1253,7 +1253,8 @@ audio_v <= "00" & spdif_out & "0";
 
   yes_lcd_yes_osd: if lcd /= 0 and osd /= 0 generate
   lcd_vga_blk: block
-    constant c_offset_x : natural :=  28; -- x-centering inc->move picture left
+    --constant c_offset_x : natural :=  28; -- x-centering inc->move picture left, cursor blinking visible
+    constant c_offset_x : natural :=  36; -- x-centering inc->move picture left, fully centered
     constant c_offset_y : natural :=  33; -- y-centering inc->move picture up
     constant c_size_x   : natural := 240;
     constant c_size_y   : natural := 240;
