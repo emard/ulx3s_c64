@@ -11,7 +11,7 @@ entity spi_osd is
     c_start_x      : natural := 64; -- x1  pixel window h-position
     c_start_y      : natural := 48; -- x1  pixel window v-position
     c_char_bits_x  : natural :=  5; -- 2**n chars h-size (x8  pixels)
-    c_chars_y      : natural := 24; -- chars v-size (x16 pixels)
+    c_chars_y      : natural := 20; -- chars v-size (x16 pixels)
     c_bits_x       : natural := 10; -- bits in x counter
     c_bits_y       : natural := 10; -- bits in y counter
     c_init_on      : natural :=  1; -- 0:default OFF 1:default ON

@@ -17,14 +17,15 @@ from uctypes import addressof
 from struct import unpack
 import os
 import gc
+import osdpin
 
-gpio_cs   = const(5)
-gpio_sck  = const(25) # gn[11]
-gpio_mosi = const(26) # gp[11]
-gpio_miso = const(16)
+#gpio_cs   = const(5)
+#gpio_sck  = const(25) # gn[11]
+#gpio_mosi = const(26) # gp[11]
+#gpio_miso = const(16)
 
 screen_x = const(64)
-screen_y = const(18)
+screen_y = const(20)
 
 cwd = "/"
 exp_names = " KMGTE"
@@ -40,8 +41,8 @@ spi_freq = const(6000000)
 
 def init_spi():
   global spi,cs
-  spi=SPI(spi_channel, baudrate=spi_freq, polarity=0, phase=0, bits=8, firstbit=SPI.MSB, sck=Pin(gpio_sck), mosi=Pin(gpio_mosi), miso=Pin(gpio_miso))
-  cs=Pin(gpio_cs,Pin.OUT)
+  spi=SPI(spi_channel, baudrate=spi_freq, polarity=0, phase=0, bits=8, firstbit=SPI.MSB, sck=Pin(osdpin.gpio_sck), mosi=Pin(osdpin.gpio_mosi), miso=Pin(osdpin.gpio_miso))
+  cs=Pin(osdpin.gpio_cs,Pin.OUT)
   cs.off()
 
 @micropython.viper
@@ -239,15 +240,15 @@ def osd_print(x:int, y:int, i:int, text):
   spi.write(text)
   cs.off()
 
-@micropython.viper
-def osd_cls():
-  p8msg=ptr8(addressof(spi_write_osd))
-  p8msg[3]=0xF0
-  p8msg[4]=0
-  cs.on()
-  spi.write(spi_write_osd)
-  spi.read(1280,32)
-  cs.off()
+#@micropython.viper
+#def osd_cls():
+#  p8msg=ptr8(addressof(spi_write_osd))
+#  p8msg[3]=0xF0
+#  p8msg[4]=0
+#  cs.on()
+#  spi.write(spi_write_osd)
+#  spi.read(1280,32)
+#  cs.off()
 
 # y is actual line on the screen
 def show_dir_line(y):
@@ -347,7 +348,7 @@ def poke(addr,data):
 try:
   os.mount(SDCard(slot=3),"/sd")
   import ecp5
-  ecp5.prog("/sd/c64/bitstreams/ulx3s_85f_v20_c64_origrom.bit")
+  #ecp5.prog("/sd/c64/bitstreams/ulx3s_85f_v20_c64_origrom.bit")
 except:
   print("check SD and ecp5.py")
 
@@ -362,5 +363,5 @@ read_dir()
 irq_handler(0) # service eventual pending/stale IRQ
 # activate IRQ service
 irq_handler_ref = irq_handler # allocation happens here
-spi_request = Pin(0, Pin.IN, Pin.PULL_UP)
+spi_request = Pin(osdpin.gpio_irq, Pin.IN, Pin.PULL_UP)
 spi_request.irq(trigger=Pin.IRQ_FALLING, handler=irq_handler_ref)

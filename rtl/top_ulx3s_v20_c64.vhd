@@ -24,9 +24,9 @@ entity top_ulx3s_v20_c64 is
     -- doublescan (currently for 6569 PAL only)
     -- 0: not doublescan : compiling easy,      video difficult : 1616x300@51Hz
     -- 1: yes doublescan : compiling difficult, video easy      :  720x576@51Hz
-    doublescan: integer := 0; -- 0:no, 1:yes
+    doublescan: integer := 1; -- 0:no, 1:yes
     osd       : integer := 1; -- 0:no, 1:yes
-    lcd       : integer := 1; -- ST7789 LCD mini-display (need doublescan=0, osd=1)
+    lcd       : integer := 0; -- ST7789 LCD mini-display (need doublescan=0, osd=1)
     -- SID version
     -- 0: SID6581 from C64 legacy. Problems: core produces low sound quality
     -- 1: SID8580 from C128. Core prdouces high sound quality (good for SPDIF)
@@ -53,10 +53,14 @@ entity top_ulx3s_v20_c64 is
     -- WiFi additional signaling
     wifi_txd: in std_logic;
     wifi_rxd: out std_logic;
-    wifi_gpio0  : out std_logic;
-    wifi_gpio5  : in std_logic;
-    wifi_gpio16 : inout std_logic;
     
+    -- SPI slave ESP32 interface
+    wifi_gpio5  : in  std_logic; -- cs
+    wifi_gpio16 : in  std_logic; -- sck
+    wifi_gpio4  : in  std_logic; -- mosi
+    wifi_gpio12 : out std_logic; -- miso
+    wifi_gpio0  : out std_logic; -- irq
+
     -- Audio
     audio_l, audio_r, audio_v: out std_logic_vector(3 downto 0);
 
@@ -631,10 +635,10 @@ end process;
 
 -- ESP32 -> FPGA
 spi_csn <= not wifi_gpio5;
-spi_sck <= gn(11); -- wifi_gpio25
-spi_mosi <= gp(11); -- wifi_gpio26
+spi_sck <= wifi_gpio16; -- wifi_gpio25
+spi_mosi <= wifi_gpio4; -- wifi_gpio26
 -- FPGA -> ESP32
-wifi_gpio16 <= spi_miso;
+wifi_gpio12 <= spi_miso;
 wifi_gpio0 <= not spi_irq; -- wifi_gpio0 IRQ active low
 
 spi_slave_ram_btn: entity work.spi_ram_btn
@@ -1169,7 +1173,7 @@ audio_v <= "00" & spdif_out & "0";
   (
     c_start_x      => osd_start_x(doublescan), -- x centering increase -> right
     c_start_y      => osd_start_y(doublescan), -- y centering increase -> down
-    c_char_bits_x  =>  6, c_chars_y => 15, -- xy size, slightly less than full screen
+    c_char_bits_x  =>  6, c_chars_y => 20, -- xy size, slightly less than full screen
     c_bits_x       => 11, c_bits_y  =>  9, -- xy counters bits
     c_inverse      =>  1, -- 1:support inverse video 0:no inverse video
     c_transparency =>  1, -- 1:semi-tranparent 0:opaque
@@ -1297,12 +1301,12 @@ audio_v <= "00" & spdif_out & "0";
   (
     clk_pixel => clk_pixel,
     clk_pixel_ena => r_lcd_pix_ena,
-    i_r => x"--", i_g => x"--", i_b => x"--",
+    i_r => x"00", i_g => x"00", i_b => x"00",
     i_hsync => osd_vga_hsync,
     i_vsync => osd_vga_vsync,
     i_blank => osd_vga_blank,
     i_osd_en => '0',
-    i_osd_r => x"--", i_osd_g => x"--", i_osd_b => x"--",
+    i_osd_r => x"00", i_osd_g => x"00", i_osd_b => x"00",
     o_osd_en => s_custom_blankn
   );
   s_custom_blank <= not s_custom_blankn;
