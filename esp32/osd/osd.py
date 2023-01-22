@@ -37,7 +37,7 @@ spi_result = bytearray(7)
 spi_enable_osd = bytearray([0,0xFE,0,0,0,1])
 spi_write_osd = bytearray([0,0xFD,0,0,0])
 spi_channel = const(2)
-spi_freq = const(6000000)
+spi_freq = const(5000000)
 
 def init_spi():
   global spi,cs
@@ -348,7 +348,7 @@ def poke(addr,data):
 try:
   os.mount(SDCard(slot=3),"/sd")
   import ecp5
-  #ecp5.prog("/sd/c64/bitstreams/ulx3s_85f_v20_c64_origrom.bit")
+  ecp5.prog("/sd/c64/bitstreams/ulx3s_85f_v20_c64_origrom.bit")
 except:
   print("check SD and ecp5.py")
 
